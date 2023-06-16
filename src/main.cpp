@@ -513,10 +513,8 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 		puts("Init assisters");
 		obj[0xA]->objectBase.owner = &This->leftCharacterManager;
 		obj[0xA]->objectBase.owner2 = &This->leftCharacterManager;
-		*(void **)&obj[0xA]->objects.offset_0x00[0x64] = &This->leftCharacterManager;
 		obj[0xB]->objectBase.owner = &This->rightCharacterManager;
 		obj[0xB]->objectBase.owner2 = &This->rightCharacterManager;
-		*(void **)&obj[0xB]->objects.offset_0x00[0x64] = &This->rightCharacterManager;
 		obj[0xA]->objectBase.opponent = &This->rightCharacterManager;
 		obj[0xB]->objectBase.opponent = &This->leftCharacterManager;
 		obj[0xA]->objectBase.renderInfos.yRotation = 90;
