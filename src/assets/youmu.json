@@ -1,0 +1,109 @@
+{
+    "22": {
+        "ground": {
+            "cd": 200,
+            "nb": 1,
+            "action": 566,
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": 200,
+            "cond": "end"
+        },
+        "air": {
+            "cd": 200,
+            "nb": 1,
+            "action": 566,
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": 200,
+            "posY": 0,
+            "cond": "end"
+        }
+    },
+    "214": {
+        "ground": {
+            "cd": 200,
+            "nb": 1,
+            "action": 550,
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -200,
+            "cond": "end"
+        },
+        "air": {
+            "cd": 200,
+            "nb": 1,
+            "action": 550,
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -200,
+            "posY": 0,
+            "cond": "end"
+        }
+    },
+    "236": {
+        "ground": {
+            "cd": 200,
+            "nb": 1,
+            "action": 506,
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -75,
+            "cond": "end"
+        },
+        "air": {
+            "cd": 200,
+            "nb": 1,
+            "action": 506,
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -75,
+            "posY": 0,
+            "cond": "end"
+        }
+    },
+    "623": {
+        "ground": {
+            "cd": 200,
+            "nb": 1,
+            "action": 546,
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -150,
+            "cond": "end"
+        },
+        "air": {
+            "cd": 200,
+            "nb": 1,
+            "action": 546,
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -150,
+            "posY": 0,
+            "cond": "end"
+        }
+    },
+    "624": {
+        "ground": {
+            "cd": 1200,
+            "nb": 1,
+            "wall": true,
+            "action": 606,
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -100,
+            "cond": "end"
+        },
+        "air": {
+            "cd": 1200,
+            "nb": 1,
+            "wall": true,
+            "action": 606,
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -100,
+            "posY": 0,
+            "cond": "end"
+        }
+    }
+}
