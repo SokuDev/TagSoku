@@ -25,6 +25,28 @@
 #define LEFT_CROSS SokuLib::Vector2i{108, 417}
 #define RIGHT_CROSS SokuLib::Vector2i{505, 417}
 
+struct GameDataManager {
+	// 0x00
+	SokuLib::List<std::pair<int, SokuLib::PlayerInfo*>> createQueue;
+	// 0x0C
+	bool isThreadsRunning; // align 3
+	// 0x10
+	uint32_t threadHandleA; // 0x46e6d0 
+	uint32_t threadIdA;
+	uint32_t threadHandleB; // 0x46e6f0 THREAD_PRIORITY_IDLE
+	uint32_t threadIdB;
+	uint32_t eventHandleA;
+	uint32_t eventHandleB;
+	// 0x28
+	SokuLib::CharacterManager* players[4];
+	// 0x38
+	bool enabledPlayers[4]; // 01 01 00 00
+	// 0x3C
+	SokuLib::Vector<SokuLib::CharacterManager*> activePlayers;
+	// 0x4C
+	SokuLib::List<SokuLib::CharacterManager*> destroyQueue;
+}; // 0x58
+
 struct Coord { float x, y, z; };
 struct SpriteEx {
 	void *vtable;
@@ -122,8 +144,10 @@ static int (SokuLib::SelectClient::*ogSelectCLOnProcess)();
 static int (SokuLib::SelectServer::*ogSelectSVOnProcess)();
 static int (SokuLib::BattleManager::*ogBattleMgrOnProcess)();
 static void (SokuLib::BattleManager::*ogBattleMgrOnRender)();
+static void (__fastcall *ogBattleMgrHandleCollision)(SokuLib::BattleManager*, int, void*, SokuLib::CharacterManager*);
 static void (__stdcall *s_origLoadDeckData)(char *, void *, SokuLib::DeckInfo &, int, SokuLib::Dequeue<short> &);
-static SokuLib::CharacterManager *obj[0xC] = {nullptr};
+//static SokuLib::CharacterManager *obj[0xC] = {nullptr};
+static GameDataManager*& dataMgr = *(GameDataManager**)SokuLib::ADDR_GAME_DATA_MANAGER;
 static SokuLib::DrawUtils::Sprite gagesEffects[3];
 static bool spawned = false;
 static bool init = false;
@@ -376,77 +400,75 @@ void updateObject(SokuLib::CharacterManager *main, SokuLib::CharacterManager *mg
 			chr.cd -= !!chr.cd;
 		if (mgr->objectBase.action < SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN)
 			mgr->objectBase.position = main->objectBase.position;
-		goto update;
 	}
-	if (chr.nb != 0 && mgr->objectBase.renderInfos.yRotation != 0) {
+	else if (chr.nb != 0 && mgr->objectBase.renderInfos.yRotation != 0) {
 		mgr->objectBase.renderInfos.yRotation -= 10;
-		goto update;
 	}
-	if (mgr->objectBase.action >= SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN && mgr->objectBase.action <= SokuLib::ACTION_NEUTRAL_TECH) {
+	else if (mgr->objectBase.action >= SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN && mgr->objectBase.action <= SokuLib::ACTION_NEUTRAL_TECH) {
 		chr.nb = 0;
 		mgr->objectBase.renderInfos.yRotation += 10;
 		chr.cd += 900;
 		chr.maxCd += 900;
 		mgr->objectBase.action = SokuLib::ACTION_IDLE;
 		mgr->objectBase.animate();
-		goto update;
 	}
-	if (chr.cond(mgr, chr)) {
+	else if (chr.cond(mgr, chr)) {
 		if (chr.nb == 0) {
 			mgr->objectBase.renderInfos.yRotation += 10;
-			goto update;
+// 			goto update;
+		} else {
+			chr.nb--;
+			mgr->objectBase.action = chr.action;
+			mgr->objectBase.hitCount = chr.hitCount;
+			mgr->objectBase.offset_0x18C[4] = 0;
+			mgr->objectBase.animate();
+			if (chr.cutscene == 1)
+				displaySkillLevelUpEffect(*mgr);
 		}
-		chr.nb--;
-		mgr->objectBase.action = chr.action;
-		mgr->objectBase.hitCount = chr.hitCount;
-		mgr->objectBase.offset_0x18C[4] = 0;
-		mgr->objectBase.animate();
-		if (chr.cutscene == 1)
-			displaySkillLevelUpEffect(*mgr);
 	}
-update:
-	if (mgr->objectBase.hitstop)
-		mgr->objectBase.hitstop--;
+// update:
+// 	if (mgr->objectBase.hitstop)
+// 		mgr->objectBase.hitstop--;
 
-	if (chr.gravity.x) {
-		mgr->objectBase.gravity.x = *chr.gravity.x;
-		if (chr.speed.x)
-			mgr->objectBase.speed.x = *chr.speed.x;
-	}
-	if (chr.gravity.y) {
-		mgr->objectBase.gravity.y = *chr.gravity.y;
-		if (chr.speed.y)
-			mgr->objectBase.speed.y = *chr.speed.y;
-	}
-	batlMgr.leftCharacterManager.timeStop = 0;
-	batlMgr.rightCharacterManager.timeStop = 0;
-	if (batlMgr.currentRound >= 2)
-		memset(mgr->skillMap, 4, sizeof(mgr->skillMap));
-	else
-		memset(mgr->skillMap, batlMgr.currentRound + 1, sizeof(mgr->skillMap));
-	if (chr.chr == SokuLib::CHARACTER_SUWAKO)
-		mgr->skillMap[11].notUsed = true;
-	(*(int (__thiscall **)(SokuLib::CharacterManager *))(*(int *)&mgr->objectBase.vtable + 0x40))(mgr);
-	(*(int (__thiscall **)(SokuLib::CharacterManager *))(*(int *)&mgr->objectBase.vtable + 0x28))(mgr);
-	((int (__thiscall *)(SokuLib::CharacterManager *))0x46A240)(mgr);
-	for (auto o : mgr->objects.list.vector())
-		if (o)
-			o->owner = o->owner2 = mgr->objectBase.owner;
-	if (!mgr->objectBase.hitstop)
-		mgr->objectBase.position += SokuLib::Vector2f{mgr->objectBase.speed.x * mgr->objectBase.direction, mgr->objectBase.speed.y};
-	if (chr.blockedByWall) {
-		if (mgr->objectBase.position.x <= 40)
-			mgr->objectBase.position.x = 40;
-		if (mgr->objectBase.position.x >= 1240)
-			mgr->objectBase.position.x = 1240;
-	}
-	if (mgr->objectBase.position.x <= 40 && chr.chr == SokuLib::CHARACTER_REMILIA && chr.action == 560)
-		mgr->objectBase.position.x = 40;
-	if (mgr->objectBase.position.x >= 1240 && chr.chr == SokuLib::CHARACTER_REMILIA && chr.action == 560)
-		mgr->objectBase.position.x = 1240;
-	//mgr->objectBase.speed.y -= mgr->objectBase.gravity;
-	if (!mgr->timeStop)
-		(mgr->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)()>(0x633ce0))();
+// 	if (chr.gravity.x) {
+// 		mgr->objectBase.gravity.x = *chr.gravity.x;
+// 		if (chr.speed.x)
+// 			mgr->objectBase.speed.x = *chr.speed.x;
+// 	}
+// 	if (chr.gravity.y) {
+// 		mgr->objectBase.gravity.y = *chr.gravity.y;
+// 		if (chr.speed.y)
+// 			mgr->objectBase.speed.y = *chr.speed.y;
+// 	}
+// 	batlMgr.leftCharacterManager.timeStop = 0;
+// 	batlMgr.rightCharacterManager.timeStop = 0;
+// 	if (batlMgr.currentRound >= 2)
+// 		memset(mgr->skillMap, 4, sizeof(mgr->skillMap));
+// 	else
+// 		memset(mgr->skillMap, batlMgr.currentRound + 1, sizeof(mgr->skillMap));
+// 	if (chr.chr == SokuLib::CHARACTER_SUWAKO)
+// 		mgr->skillMap[11].notUsed = true;
+// 	(*(int (__thiscall **)(SokuLib::CharacterManager *))(*(int *)&mgr->objectBase.vtable + 0x40))(mgr);
+// 	(*(int (__thiscall **)(SokuLib::CharacterManager *))(*(int *)&mgr->objectBase.vtable + 0x28))(mgr);
+// 	((int (__thiscall *)(SokuLib::CharacterManager *))0x46A240)(mgr);
+// 	for (auto o : mgr->objects.list.vector())
+// 		if (o)
+// 			o->owner = o->owner2 = mgr->objectBase.owner;
+// 	if (!mgr->objectBase.hitstop)
+// 		mgr->objectBase.position += SokuLib::Vector2f{mgr->objectBase.speed.x * mgr->objectBase.direction, mgr->objectBase.speed.y};
+// 	if (chr.blockedByWall) {
+// 		if (mgr->objectBase.position.x <= 40)
+// 			mgr->objectBase.position.x = 40;
+// 		if (mgr->objectBase.position.x >= 1240)
+// 			mgr->objectBase.position.x = 1240;
+// 	}
+// 	if (mgr->objectBase.position.x <= 40 && chr.chr == SokuLib::CHARACTER_REMILIA && chr.action == 560)
+// 		mgr->objectBase.position.x = 40;
+// 	if (mgr->objectBase.position.x >= 1240 && chr.chr == SokuLib::CHARACTER_REMILIA && chr.action == 560)
+// 		mgr->objectBase.position.x = 1240;
+// 	//mgr->objectBase.speed.y -= mgr->objectBase.gravity;
+// 	if (!mgr->timeStop)
+// 		(mgr->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)()>(0x633ce0))();
 }
 
 bool initAttack(SokuLib::CharacterManager *main, SokuLib::CharacterManager *obj, ChrInfo &chr, std::pair<std::optional<ChrInfo>, std::optional<ChrInfo>> &data)
@@ -510,14 +532,23 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 		disp = !disp;
 	if (!init) {
 		puts("Init assisters");
-		obj[0xA]->objectBase.owner = &This->leftCharacterManager;
-		obj[0xA]->objectBase.owner2 = &This->leftCharacterManager;
-		obj[0xB]->objectBase.owner = &This->rightCharacterManager;
-		obj[0xB]->objectBase.owner2 = &This->rightCharacterManager;
-		obj[0xA]->objectBase.opponent = &This->rightCharacterManager;
-		obj[0xB]->objectBase.opponent = &This->leftCharacterManager;
-		obj[0xA]->objectBase.renderInfos.yRotation = 90;
-		obj[0xB]->objectBase.renderInfos.yRotation = 90;
+		//dataMgr->activePlayers.push_back(dataMgr->players[2]);
+		//dataMgr->activePlayers.push_back(dataMgr->players[3]);
+		auto alloc = SokuLib::New<void *>(4);
+		alloc[0] = dataMgr->activePlayers[0];
+		alloc[1] = dataMgr->activePlayers[1];
+		alloc[2] = dataMgr->players[2];
+		alloc[3] = dataMgr->players[3];
+		SokuLib::DeleteFct(*(void **)(*(int *)SokuLib::ADDR_GAME_DATA_MANAGER + 0x40));
+		*(void **)(*(int *)SokuLib::ADDR_GAME_DATA_MANAGER + 0x40) = alloc;
+		*(void **)(*(int *)SokuLib::ADDR_GAME_DATA_MANAGER + 0x44) = &alloc[4];
+
+		dataMgr->players[2]->objectBase.owner2 = &This->leftCharacterManager;
+		dataMgr->players[3]->objectBase.owner2 = &This->rightCharacterManager;
+		dataMgr->players[2]->objectBase.opponent = &This->rightCharacterManager;
+		dataMgr->players[3]->objectBase.opponent = &This->leftCharacterManager;
+		dataMgr->players[2]->objectBase.renderInfos.yRotation = 90;
+		dataMgr->players[3]->objectBase.renderInfos.yRotation = 90;
 		init = true;
 	}
 
@@ -536,66 +567,66 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 	auto right = &This->rightCharacterManager;
 
 	if (left->timeStop || right->timeStop) {
-		if (obj[0xA]->timeStop)
-			updateObject(left, obj[0xA], chr.first);
-		if (obj[0xB]->timeStop)
-			updateObject(right, obj[0xB], chr.second);
+		if (dataMgr->players[2]->timeStop)
+			updateObject(left, dataMgr->players[2], chr.first);
+		if (dataMgr->players[3]->timeStop)
+			updateObject(right, dataMgr->players[3], chr.second);
 	} else {
-		if (!obj[0xB]->timeStop)
-			updateObject(left, obj[0xA], chr.first);
-		if (!obj[0xA]->timeStop)
-			updateObject(right, obj[0xB], chr.second);
+		if (!dataMgr->players[3]->timeStop)
+			updateObject(left, dataMgr->players[2], chr.first);
+		if (!dataMgr->players[2]->timeStop)
+			updateObject(right, dataMgr->players[3], chr.second);
 	}
-	assisterAttacks(left,  obj[0xA], chr.first,  data[chr.first.chr]);
-	assisterAttacks(right, obj[0xB], chr.second, data[chr.second.chr]);
+	assisterAttacks(left,  dataMgr->players[2], chr.first,  data[chr.first.chr]);
+	assisterAttacks(right, dataMgr->players[3], chr.second, data[chr.second.chr]);
 
-	if (obj[0xA]->timeStop || obj[0xB]->timeStop) {
+	if (dataMgr->players[2]->timeStop || dataMgr->players[3]->timeStop) {
 		left->timeStop  = max(left->timeStop  + 1, 2);
 		right->timeStop = max(right->timeStop + 1, 2);
 	}
 	if (This->matchState == 2) {
-		auto oldL = obj[0xA]->objectBase.renderInfos.yRotation;
-		auto oldR = obj[0xB]->objectBase.renderInfos.yRotation;
+		auto oldL = dataMgr->players[2]->objectBase.renderInfos.yRotation;
+		auto oldR = dataMgr->players[3]->objectBase.renderInfos.yRotation;
 
 		anim = false;
 		// Collision between P1's assist and P2 {
-		((SokuLib::CharacterManager **)This)[3] = obj[0xA];
-		if (obj[0xA]->objectBase.renderInfos.yRotation != 90)
-			((SokuLib::CharacterManager **)This)[4]->objectBase.opponent = obj[0xA];
-		reinterpret_cast<void (__thiscall *)(SokuLib::BattleManager *)>(0x47d0d0)(This);
-		((SokuLib::CharacterManager **)This)[3] = left;
-		((SokuLib::CharacterManager **)This)[4]->objectBase.opponent = left;
+		// ((SokuLib::CharacterManager **)This)[3] = dataMgr->players[2];
+		// if (dataMgr->players[2]->objectBase.renderInfos.yRotation != 90)
+		// 	((SokuLib::CharacterManager **)This)[4]->objectBase.opponent = dataMgr->players[2];
+		// reinterpret_cast<void (__thiscall *)(SokuLib::BattleManager *)>(0x47d0d0)(This);
+		// ((SokuLib::CharacterManager **)This)[3] = left;
+		// ((SokuLib::CharacterManager **)This)[4]->objectBase.opponent = left;
 
-		((SokuLib::CharacterManager **)This)[4] = obj[0xB];
-		if (obj[0xB]->objectBase.renderInfos.yRotation != 90)
-			((SokuLib::CharacterManager **)This)[3]->objectBase.opponent = obj[0xB];
-		reinterpret_cast<void (__thiscall *)(SokuLib::BattleManager *)>(0x47d0d0)(This);
-		((SokuLib::CharacterManager **)This)[4] = right;
-		((SokuLib::CharacterManager **)This)[3]->objectBase.opponent = right;
+		// ((SokuLib::CharacterManager **)This)[4] = dataMgr->players[3];
+		// if (dataMgr->players[3]->objectBase.renderInfos.yRotation != 90)
+		// 	((SokuLib::CharacterManager **)This)[3]->objectBase.opponent = dataMgr->players[3];
+		// reinterpret_cast<void (__thiscall *)(SokuLib::BattleManager *)>(0x47d0d0)(This);
+		// ((SokuLib::CharacterManager **)This)[4] = right;
+		// ((SokuLib::CharacterManager **)This)[3]->objectBase.opponent = right;
 
 		// Collision between P1's assist and P2's assist
-		if (obj[0xA]->objectBase.renderInfos.yRotation != 90 || obj[0xB]->objectBase.renderInfos.yRotation != 90) {
-			((SokuLib::CharacterManager **)This)[3] = obj[0xA];
-			((SokuLib::CharacterManager **)This)[4] = obj[0xB];
-			if (obj[0xB]->objectBase.renderInfos.yRotation != 90)
-				obj[0xA]->objectBase.opponent = obj[0xB];
-			if (obj[0xA]->objectBase.renderInfos.yRotation != 90)
-				obj[0xB]->objectBase.opponent = obj[0xA];
-			reinterpret_cast<void (__thiscall *)(SokuLib::BattleManager *)>(0x47d0d0)(This);
-			((SokuLib::CharacterManager **)This)[3] = left;
-			((SokuLib::CharacterManager **)This)[4] = right;
-			obj[0xA]->objectBase.opponent = &This->rightCharacterManager;
-			obj[0xB]->objectBase.opponent = &This->leftCharacterManager;
-		}
-		obj[0xA]->objectBase.renderInfos.yRotation = oldL;
-		obj[0xB]->objectBase.renderInfos.yRotation = oldR;
+		// if (dataMgr->players[2]->objectBase.renderInfos.yRotation != 90 || dataMgr->players[3]->objectBase.renderInfos.yRotation != 90) {
+		// 	((SokuLib::CharacterManager **)This)[3] = dataMgr->players[2];
+		// 	((SokuLib::CharacterManager **)This)[4] = dataMgr->players[3];
+		// 	if (dataMgr->players[3]->objectBase.renderInfos.yRotation != 90)
+		// 		dataMgr->players[2]->objectBase.opponent = dataMgr->players[3];
+		// 	if (dataMgr->players[2]->objectBase.renderInfos.yRotation != 90)
+		// 		dataMgr->players[3]->objectBase.opponent = dataMgr->players[2];
+		// 	reinterpret_cast<void (__thiscall *)(SokuLib::BattleManager *)>(0x47d0d0)(This);
+		// 	((SokuLib::CharacterManager **)This)[3] = left;
+		// 	((SokuLib::CharacterManager **)This)[4] = right;
+		// 	dataMgr->players[2]->objectBase.opponent = &This->rightCharacterManager;
+		// 	dataMgr->players[3]->objectBase.opponent = &This->leftCharacterManager;
+		// }
+		dataMgr->players[2]->objectBase.renderInfos.yRotation = oldL;
+		dataMgr->players[3]->objectBase.renderInfos.yRotation = oldR;
 	} else if (This->matchState == 1) {
 		chr.first.cd = 0;
 		chr.second.cd = 0;
 		if (!anim) {
 			anim = true;
-			initSkillUpgrade(chr.first,  assists.first, *obj[0xA],  *left);
-			initSkillUpgrade(chr.second, assists.second, *obj[0xB], *right);
+			initSkillUpgrade(chr.first,  assists.first, *dataMgr->players[2],  *left);
+			initSkillUpgrade(chr.second, assists.second, *dataMgr->players[3], *right);
 		}
 	}
 	return ret;
@@ -609,14 +640,7 @@ void selectCommon()
 	if (spawned) {
 		spawned = false;
 		init = false;
-		puts("Destroying assist 1");
-		(*(void (__thiscall **)(SokuLib::CharacterManager *, char))obj[0xA]->objectBase.vtable)(obj[0xA], 0);
-		puts("Deleting assist 1");
-		SokuLib::Delete(obj[0xA]);
-		puts("Destroying assist 2");
-		(*(void (__thiscall **)(SokuLib::CharacterManager *, char))obj[0xB]->objectBase.vtable)(obj[0xB], 0);
-		puts("Deleting assist 2");
-		SokuLib::Delete(obj[0xB]);
+		// automatically destroyed
 	}
 
 	if (scene.leftSelect.keys && scene.leftSelect.keys != scene.rightSelect.keys && SokuLib::checkKeyOneshot(DIK_F8, false, false, false) && SokuLib::mainMode != SokuLib::BATTLE_MODE_VSSERVER) {
@@ -668,6 +692,16 @@ int __fastcall CSelectCL_OnProcess(SokuLib::SelectClient *This)
 	return ret;
 }
 
+void __fastcall CBattleManager_HandleCollision(SokuLib::BattleManager* This, int unused, void* object, SokuLib::CharacterManager* character) {
+	auto players = (SokuLib::CharacterManager**)((int)This + 0x0C);
+	auto assist = character == players[0] ? players[2] : players[3];
+	auto oldRotation = assist->objectBase.renderInfos.yRotation;
+	ogBattleMgrHandleCollision(This, unused, object, assist);
+	assist->objectBase.renderInfos.yRotation = oldRotation;
+
+	ogBattleMgrHandleCollision(This, unused, object, character);
+}
+
 void displayAssistGage(ChrInfo &chr, int x, SokuLib::Vector2i bar, SokuLib::Vector2i cross, bool mirror)
 {
 	auto &sprite = data[chr.chr];
@@ -717,31 +751,31 @@ void __fastcall CBattleManager_OnRender(SokuLib::BattleManager *This)
 	(This->*ogBattleMgrOnRender)();
 	if (init && This->matchState < 6) {
 		//TODO: Add these in SokuLib
-		(obj[0xA]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(-2);
-		(obj[0xB]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(-2);
-		(obj[0xA]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(-1);
-		(obj[0xB]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(-1);
-		(obj[0xA]->*SokuLib::union_cast<void (SokuLib::CharacterManager::*)()>(0x438d20))();
-		(obj[0xB]->*SokuLib::union_cast<void (SokuLib::CharacterManager::*)()>(0x438d20))();
+		// (dataMgr->players[2]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(-2);
+		// (dataMgr->players[3]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(-2);
+		// (dataMgr->players[2]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(-1);
+		// (dataMgr->players[3]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(-1);
+		// (dataMgr->players[2]->*SokuLib::union_cast<void (SokuLib::CharacterManager::*)()>(0x438d20))();
+		// (dataMgr->players[3]->*SokuLib::union_cast<void (SokuLib::CharacterManager::*)()>(0x438d20))();
 		displayAssistGage(chr.first,  LEFT_ASSIST_BOX_X,  LEFT_BAR,  LEFT_CROSS,  false);
 		displayAssistGage(chr.second, RIGHT_ASSIST_BOX_X, RIGHT_BAR, RIGHT_CROSS, true);
-		(obj[0xA]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(1);
-		(obj[0xB]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(1);
-		(obj[0xA]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(2);
-		(obj[0xB]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(2);
+		// (dataMgr->players[2]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(1);
+		// (dataMgr->players[3]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(1);
+		// (dataMgr->players[2]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(2);
+		// (dataMgr->players[3]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(2);
 
-		float old = This->leftCharacterManager.objectBase.position.y;
+		// float old = This->leftCharacterManager.objectBase.position.y;
 
-		This->leftCharacterManager.objectBase.position.y = 15000;
-		(This->leftCharacterManager.*SokuLib::union_cast<void (SokuLib::CharacterManager::*)()>(0x438d20))();
-		This->leftCharacterManager.objectBase.position.y = old;
+		// This->leftCharacterManager.objectBase.position.y = 15000;
+		// (This->leftCharacterManager.*SokuLib::union_cast<void (SokuLib::CharacterManager::*)()>(0x438d20))();
+		// This->leftCharacterManager.objectBase.position.y = old;
 		if (show && SokuLib::mainMode != SokuLib::BATTLE_MODE_VSSERVER && SokuLib::mainMode != SokuLib::BATTLE_MODE_VSCLIENT) {
 			if (!hasRIV) {
 				drawPlayerBoxes(This->leftCharacterManager);
 				drawPlayerBoxes(This->rightCharacterManager);
 			}
-			drawPlayerBoxes(*obj[0xA], chr.first.nb != 0 || obj[0xA]->objectBase.renderInfos.yRotation == 0);
-			drawPlayerBoxes(*obj[0xB], chr.second.nb != 0 || obj[0xB]->objectBase.renderInfos.yRotation == 0);
+			drawPlayerBoxes(*dataMgr->players[2], chr.first.nb != 0 || dataMgr->players[2]->objectBase.renderInfos.yRotation == 0);
+			drawPlayerBoxes(*dataMgr->players[3], chr.second.nb != 0 || dataMgr->players[3]->objectBase.renderInfos.yRotation == 0);
 		}
 	}
 }
@@ -753,13 +787,13 @@ void __stdcall loadDeckData(char *charName, void *csvFile, SokuLib::DeckInfo &de
 			spawned = false;
 			init = false;
 			puts("Destroying assist 1");
-			(*(void (__thiscall **)(SokuLib::CharacterManager *, char))obj[0xA]->objectBase.vtable)(obj[0xA], 0);
+			//(*(void (__thiscall **)(SokuLib::CharacterManager *, char))dataMgr->players[2]->objectBase.vtable)(dataMgr->players[2], 0);
 			puts("Deleting assist 1");
-			SokuLib::Delete(obj[0xA]);
+			//SokuLib::Delete(dataMgr->players[2]);
 			puts("Destroying assist 2");
-			(*(void (__thiscall **)(SokuLib::CharacterManager *, char))obj[0xB]->objectBase.vtable)(obj[0xB], 0);
+			//(*(void (__thiscall **)(SokuLib::CharacterManager *, char))dataMgr->players[3]->objectBase.vtable)(dataMgr->players[3], 0);
 			puts("Deleting assist 2");
-			SokuLib::Delete(obj[0xB]);
+			//SokuLib::Delete(dataMgr->players[3]);
 		}
 
 		spawned = true;
@@ -774,6 +808,8 @@ void __stdcall loadDeckData(char *charName, void *csvFile, SokuLib::DeckInfo &de
 			"426"
 		};
 
+		SokuLib::CharacterManager** players = (SokuLib::CharacterManager**)((int)&SokuLib::getBattleMgr() + 0x0C);
+
 		puts("Not spawned. Loading both assisters");
 		memset(&p, 0, sizeof(p));
 		chr.first = ChrInfo();
@@ -784,8 +820,9 @@ void __stdcall loadDeckData(char *charName, void *csvFile, SokuLib::DeckInfo &de
 		p.palette += p.palette == SokuLib::rightPlayerInfo.palette && SokuLib::rightChar == assists.first;
 		p.isRight = false;
 		puts("Loading character 1");
-		((void (__thiscall *)(SokuLib::CharacterManager **, bool, SokuLib::PlayerInfo &))0x46da40)(obj, false, p);
-		(*(void (__thiscall **)(SokuLib::CharacterManager *))(*(int *)obj[0xA] + 0x44))(obj[0xA]);
+		((void (__thiscall *)(GameDataManager*, int, SokuLib::PlayerInfo &))0x46da40)(dataMgr, 2, p);
+		(*(void (__thiscall **)(SokuLib::CharacterManager *))(*(int *)dataMgr->players[2] + 0x44))(dataMgr->players[2]);
+		players[2] = dataMgr->players[2];
 
 		int oldPal = p.palette;
 
@@ -798,11 +835,12 @@ void __stdcall loadDeckData(char *charName, void *csvFile, SokuLib::DeckInfo &de
 		p.palette += p.palette == oldPal && assists.second == assists.first;
 		p.isRight = true;
 		puts("Loading character 2");
-		((void (__thiscall *)(SokuLib::CharacterManager **, bool, SokuLib::PlayerInfo &))0x46da40)(obj, true, p);
-		(*(void (__thiscall **)(SokuLib::CharacterManager *))(*(int *)obj[0xB] + 0x44))(obj[0xB]);
+		((void (__thiscall *)(GameDataManager*, int, SokuLib::PlayerInfo &))0x46da40)(dataMgr, 3, p);
+		(*(void (__thiscall **)(SokuLib::CharacterManager *))(*(int *)dataMgr->players[3] + 0x44))(dataMgr->players[3]);
+		players[3] = dataMgr->players[3];
 
 		init = false;
-		printf("%p %p\n", obj[0xA], obj[0xB]);
+		printf("%p %p\n", dataMgr->players[2], dataMgr->players[3]);
 		for (unsigned index = 0; index < 2; index++) {
 			if (index == 1 && assists.first == assists.second)
 				continue;
@@ -1094,10 +1132,15 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	// s_origCSelect_OnProcess = TamperDword(vtbl_CSelect + 4, (DWORD)CSelect_OnProcess);
 	::VirtualProtect((PVOID)RDATA_SECTION_OFFSET, RDATA_SECTION_SIZE, old, &old);
 	::VirtualProtect((PVOID)TEXT_SECTION_OFFSET, TEXT_SECTION_SIZE, PAGE_EXECUTE_WRITECOPY, &old);
+	ogBattleMgrHandleCollision = SokuLib::TamperNearJmpOpr(0x47d618, CBattleManager_HandleCollision);
+						SokuLib::TamperNearJmpOpr(0x47d64c, CBattleManager_HandleCollision);
 	// Enable twilight weather
 	*(int *)0x483F3C = *(int *)0x483F38;
 	*(void (**)())0x483F38 = weatherFct;
 	*(char *)0x483DC4 = 0x14;
+	// Enable 4 characters collision
+	*(char *)0x47d1a1 = 0x4;
+	*(char *)0x47d520 = 0x4;
 	int newOffset = reinterpret_cast<int>(loadDeckData) - PAYLOAD_NEXT_INSTR_DECK_INFOS;
 	s_origLoadDeckData = SokuLib::union_cast<void (__stdcall *)(char *, void *, SokuLib::DeckInfo &, int, SokuLib::Dequeue<short> &)>(*(int *)PAYLOAD_ADDRESS_DECK_INFOS + PAYLOAD_NEXT_INSTR_DECK_INFOS);
 	*(int *)PAYLOAD_ADDRESS_DECK_INFOS = newOffset;
