@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 cmake_policy(SET CMP0091 NEW)
-set(PROJECT_NAME AssistSoku)
+set(PROJECT_NAME 4PSoku)
 project("${PROJECT_NAME}" C CXX)
 
 set(CMAKE_C_STANDARD 11)
