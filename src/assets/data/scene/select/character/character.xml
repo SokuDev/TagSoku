@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout version="4">
+	<static id="1000" xposition="0" yposition="0" mirror="0">
+		<image name="11b_back_red1p.bmp" xposition="0" yposition="0" width="640" height="176"/>
+	</static>
+	<static id="1001" xposition="0" yposition="304" mirror="0">
+		<image name="10b_back_blue2p.bmp" xposition="0" yposition="0" width="640" height="176"/>
+	</static>
+	<mutable id="900" xposition="-200" yposition="0"/>
+	<mutable id="901" xposition="-200" yposition="288"/>
+	<mutable id="902" xposition="100" yposition="0"/>
+	<mutable id="903" xposition="100" yposition="288"/>
+	<mutable id="800" xposition="80" yposition="96"/>
+	<mutable id="801" xposition="80" yposition="384"/>
+	<mutable id="802" xposition="230" yposition="96"/>
+	<mutable id="803" xposition="230" yposition="384"/>
+	<static id="710" xposition="498" yposition="28" mirror="0">
+		<image name="07a_back1p.bmp" xposition="0" yposition="0" width="137" height="142"/>
+	</static>
+	<static id="711" xposition="480" yposition="316" mirror="0">
+		<image name="07a_back2p.bmp" xposition="0" yposition="0" width="155" height="141"/>
+	</static>
+	<static id="711" xposition="480" yposition="316" mirror="0">
+		<image name="07a_back3p.bmp" xposition="0" yposition="0" width="155" height="141"/>
+	</static>
+	<static id="711" xposition="480" yposition="316" mirror="0">
+		<image name="07a_back4p.bmp" xposition="0" yposition="0" width="155" height="141"/>
+	</static>
+	<mutable id="700" xposition="80" yposition="144"/>
+	<mutable id="701" xposition="80" yposition="432"/>
+	<mutable id="702" xposition="230" yposition="144"/>
+	<mutable id="703" xposition="230" yposition="432"/>
+	<mutable id="720" xposition="28" yposition="116"/>
+	<mutable id="721" xposition="28" yposition="404"/>
+	<mutable id="722" xposition="178" yposition="116"/>
+	<mutable id="723" xposition="178" yposition="404"/>
+	<mutable id="600" xposition="5" yposition="176"/>
+	<mutable id="601" xposition="25" yposition="304"/>
+	<mutable id="602" xposition="27" yposition="176"/>
+	<mutable id="603" xposition="7" yposition="304"/>
+	<static id="310" xposition="8" yposition="55" mirror="0">
+		<image name="03a_dot_color.bmp" xposition="0" yposition="0" width="12" height="95"/>
+	</static>
+	<static id="311" xposition="8" yposition="343" mirror="0">
+		<image name="03a_dot_color.bmp" xposition="0" yposition="0" width="12" height="95"/>
+	</static>
+	<static id="312" xposition="158" yposition="55" mirror="0">
+		<image name="03a_dot_color.bmp" xposition="0" yposition="0" width="12" height="95"/>
+	</static>
+	<static id="313" xposition="158" yposition="343" mirror="0">
+		<image name="03a_dot_color.bmp" xposition="0" yposition="0" width="12" height="95"/>
+	</static>
+	<static id="320" xposition="32" yposition="153" mirror="0">
+		<image name="03a_dot_deck.bmp" xposition="0" yposition="0" width="91" height="12"/>
+	</static>
+	<static id="321" xposition="32" yposition="441" mirror="0">
+		<image name="03a_dot_deck.bmp" xposition="0" yposition="0" width="91" height="12"/>
+	</static>
+	<static id="322" xposition="182" yposition="153" mirror="0">
+		<image name="03a_dot_deck.bmp" xposition="0" yposition="0" width="91" height="12"/>
+	</static>
+	<static id="323" xposition="182" yposition="441" mirror="0">
+		<image name="03a_dot_deck.bmp" xposition="0" yposition="0" width="91" height="12"/>
+	</static>
+	<static id="500" xposition="0" yposition="176" mirror="0">
+		<image name="back_door.bmp" xposition="0" yposition="0" width="640" height="128"/>
+	</static>
+	<static id="402" xposition="12" yposition="169" mirror="0">
+		<image name="04b_cursor3p.bmp" xposition="0" yposition="0" width="34" height="48"/>
+	</static>
+	<static id="403" xposition="-10" yposition="264" mirror="0">
+		<image name="04b_cursor4p.bmp" xposition="0" yposition="0" width="35" height="48"/>
+	</static>
+	<static id="400" xposition="-3" yposition="169" mirror="0">
+		<image name="04b_cursor1p.bmp" xposition="2" yposition="0" width="32" height="48"/>
+	</static>
+	<static id="401" xposition="0" yposition="264" mirror="0">
+		<image name="04b_cursor2p.bmp" xposition="0" yposition="0" width="33" height="48"/>
+	</static>
+	<static id="300" xposition="432" yposition="10" mirror="0">
+		<image name="03a_chr_profile1.bmp" xposition="0" yposition="12" width="216" height="20"/>
+	</static>
+	<static id="301" xposition="432" yposition="299" mirror="0">
+		<image name="03a_chr_profile2.bmp" xposition="0" yposition="13" width="216" height="19"/>
+	</static>
+	<static id="302" xposition="432" yposition="135" mirror="0">
+		<image name="03a_chr_profile3.bmp" xposition="0" yposition="12" width="216" height="20"/>
+	</static>
+	<static id="303" xposition="432" yposition="424" mirror="0">
+		<image name="03a_chr_profile4.bmp" xposition="0" yposition="13" width="216" height="19"/>
+	</static>
+	<mutable id="100" xposition="377" yposition="40"/>
+	<mutable id="101" xposition="377" yposition="331"/>
+	<mutable id="102" xposition="377" yposition="90"/>
+	<mutable id="103" xposition="377" yposition="381"/>
+	<static id="11" xposition="0" yposition="0" mirror="0">
+		<image name="00a_character_select.bmp" xposition="0" yposition="0" width="640" height="16"/>
+	</static>
+</layout>

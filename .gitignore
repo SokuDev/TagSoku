@@ -38,3 +38,8 @@
 # Build directories
 cmake-build-*
 build
+
+# Converted Soku assets
+*.cv2
+*.pat
+*.dat
