@@ -393,7 +393,16 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 		for (int i = 0; i < 4; i++)
 			dataMgr->players[i]->objectBase.offset_0x14E[0] = i;
 		dataMgr->players[0]->keyManager->keymapManager->bindingSelect = 6;
+		dataMgr->players[1]->keyManager->keymapManager->bindingSelect = 0xFF;
+		dataMgr->players[2]->keyManager->keymapManager->bindingSelect = 0xFF;
+		dataMgr->players[3]->keyManager->keymapManager->bindingSelect = 0xFF;
 		init = true;
+	}
+
+	if (dataMgr->players[2]->objectBase.hp > 0) {
+		dataMgr->players[2]->objectBase.hp = 0;
+		dataMgr->players[2]->objectBase.action = SokuLib::ACTION_KNOCKED_DOWN_STATIC;
+		dataMgr->players[2]->objectBase.animate();
 	}
 
 	int ret = (This->*ogBattleMgrOnProcess)();
@@ -409,10 +418,6 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 		}
 	}
 	if (!SokuLib::menuManager.empty() && SokuLib::sceneId == SokuLib::SCENE_BATTLE)
-		return ret;
-	if (!dataMgr->players[3])
-		return ret;
-	if (!dataMgr->players[2])
 		return ret;
 
 	*(bool *)0x89862E = true;
@@ -458,49 +463,62 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 	return ret;
 }
 
-void selectCommon()
-{
-	auto &scene = SokuLib::currentScene->to<SokuLib::Select>();
-
-	anim = false;
-	if (spawned) {
-		spawned = false;
-		init = false;
-	}
-
-	if (SokuLib::checkKeyOneshot(DIK_F8, false, false, false) && SokuLib::mainMode != SokuLib::BATTLE_MODE_VSSERVER) {
-		printf("Changing assist for P1 to %i\n", SokuLib::leftChar);
-		assists.first.character = SokuLib::leftChar;
-		SokuLib::playSEWaveBuffer(0x28);
-	}
-	if (SokuLib::checkKeyOneshot(DIK_F8, false, false, false) && SokuLib::mainMode != SokuLib::BATTLE_MODE_VSCLIENT) {
-		printf("Changing assist for P2 to %i\n", SokuLib::rightChar);
-		assists.second.character = SokuLib::rightChar;
-		SokuLib::playSEWaveBuffer(0x28);
-	}
-}
-
 int __fastcall CSelect_OnProcess(SokuLib::Select *This)
 {
 	int ret = (This->*ogSelectOnProcess)();
 
-	selectCommon();
-	return ret;
-}
+	for (int i = 0; i < 2; i++) {
+		auto &dat = chrSelectExtra[i];
+		float offset;
+		auto &info = (&assists.first)[i];
 
-int __fastcall CSelectSV_OnProcess(SokuLib::SelectServer *This)
-{
-	int ret = (This->*ogSelectSVOnProcess)();
+		if (info.character != SokuLib::CHARACTER_RANDOM) {
+			if (dat.portraitCounter)
+				dat.portraitCounter--;
+		} else {
+			if (dat.portraitCounter < 15)
+				dat.portraitCounter++;
+		}
+		if (dat.cursorCounter)
+			dat.cursorCounter--;
+		if (dat.charNameCounter)
+			dat.charNameCounter--;
 
-	selectCommon();
-	return ret;
-}
+		if (dat.cursorCounter <= 0)
+			dat.cursor->x1 = This->charPortraitStartX + This->charPortraitSliceWidth * dat.chrHandler.pos;
+		else
+			dat.cursor->x1 -= (dat.cursor->x1 - (This->charPortraitStartX + This->charPortraitSliceWidth * dat.chrHandler.pos)) / 6;
+		if (dat.selectState == 0 || dat.selectState == 3) {
+			if (dat.deckIndCounter)
+				dat.deckIndCounter--;
+		} else {
+			if (dat.deckIndCounter < 15)
+				dat.deckIndCounter++;
+		}
+		if (dat.selectState == 0) {
+			if (dat.chrCounter < 15)
+				dat.chrCounter++;
+		} else {
+			if (dat.chrCounter)
+				dat.chrCounter--;
+		}
 
-int __fastcall CSelectCL_OnProcess(SokuLib::SelectClient *This)
-{
-	int ret = (This->*ogSelectCLOnProcess)();
+		if (dat.deckIndCounter <= 0)
+			offset = 0;
+		else if (dat.deckIndCounter >= 0xF)
+			offset = 1;
+		else
+			offset = (dat.deckIndCounter * dat.deckIndCounter) / (15.f * 15.f);
 
-	selectCommon();
+		if (i == 0)
+			dat.colorSelect->y1 = 150 - offset * 150;
+		else
+			dat.colorSelect->y1 = -150 + offset * 150;
+		dat.deckSelect->x1 = -280 + 280 * offset;
+		dat.circleSprite.rotation += 0.5;
+		if (dat.object)
+			dat.object->update();
+	}
 	return ret;
 }
 
@@ -877,11 +895,14 @@ static int extraHealing[2];
 void __declspec(naked) setHealthRegen()
 {
 	__asm {
-		MOVSX EAX, [ECX + 0x14E]
+		MOV dword ptr [ESP + 0x20], ECX
+		MOVSX EAX, byte ptr [ECX + 0x14E]
+		MOVSX ECX, BX
 		CMP AL, 2
-		JGE dontSkip
-		MOV EDX, extraHealing
-		LEA EAX, [EDX + EAX * 4]
+		JLE dontSkip
+		DEC EAX
+		DEC EAX
+		LEA EAX, [extraHealing + EAX * 4]
 		JMP skipHealthRegen
 	dontSkip:
 		JMP dontSkipHealthRegen
@@ -994,7 +1015,7 @@ SokuLib::Select *__fastcall CSelect_construct(SokuLib::Select *This)
 		dat.isInit = true;
 		((void (__thiscall *)(CEffectManager  *))0x422CF0)(&dat.effectMgr);
 		profileInfo.character = *((SokuLib::Character *(__thiscall *)(const void *, int))0x420380)(&This->offset_0x018[0x80], dat.chrHandler.pos);
-		profileInfo.palette = 1;
+		profileInfo.palette = 0;
 		profileInfo.deck = 0;
 		// data/scene/select/character/09b_character/character_%02d.bmp
 		sprintf(buffer, (char *)0x85785C, profileInfo.character);
@@ -1322,69 +1343,51 @@ void __declspec(naked) renderChrSelectChrName_hook()
 	}
 }
 
+void __fastcall changePalette(SokuLib::Select *This, int index, char palette, bool dir)
+{
+	bool ok = false;
+	auto &mine = (index < 2 ? (&SokuLib::leftPlayerInfo)[index] : (&assists.first)[index - 2]);
+	auto &mine2 = (index == 0 ? This->leftPalInput : index == 1 ? This->rightPalInput : chrSelectExtra[index - 2].palHandler);
+
+	while (!ok) {
+		ok = true;
+		for (int i = 0; i < 2; i++) {
+			if (index == i)
+				continue;
+			if ((&SokuLib::leftPlayerInfo)[i].character == mine.character && (&SokuLib::leftPlayerInfo)[i].palette == palette && (&This->leftSelectionStage)[i] != 0) {
+				palette = (palette + 7 - dir * 6) % 8;
+				ok = false;
+			}
+		}
+		for (int i = 0; i < 2; i++) {
+			if (index == i + 2)
+				continue;
+			if ((&assists.first)[i].character == mine.character && (&assists.first)[i].palette == palette && chrSelectExtra[i].selectState != 0) {
+				palette = (palette + 7 - dir * 6) % 8;
+				ok = false;
+			}
+		}
+	}
+	mine.palette = palette;
+	mine2.pos = palette;
+	mine2.posCopy = palette;
+}
+
 int updateCharacterSelect_hook_failAddr = 0x42091D;
 int updateCharacterSelect_hook_retAddr = 0x4208F4;
 
-void updateCharacterSelect2(const SokuLib::Select *This, unsigned i)
+void updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 {
 	auto &dat = chrSelectExtra[i];
 	char buffer[128];
 	SokuLib::Vector2i size;
-	float offset;
 	auto &info = (&assists.first)[i];
-
-	if (info.character != SokuLib::CHARACTER_RANDOM) {
-		if (dat.portraitCounter)
-			dat.portraitCounter--;
-	} else {
-		if (dat.portraitCounter < 15)
-			dat.portraitCounter++;
-	}
-	if (dat.cursorCounter)
-		dat.cursorCounter--;
-	if (dat.charNameCounter)
-		dat.charNameCounter--;
-
-	if (dat.cursorCounter <= 0)
-		dat.cursor->x1 = This->charPortraitStartX + This->charPortraitSliceWidth * dat.chrHandler.pos;
-	else
-		dat.cursor->x1 -= (dat.cursor->x1 - (This->charPortraitStartX + This->charPortraitSliceWidth * dat.chrHandler.pos)) / 6;
-	if (dat.selectState == 0 || dat.selectState == 3) {
-		if (dat.deckIndCounter)
-			dat.deckIndCounter--;
-	} else {
-		if (dat.deckIndCounter < 15)
-			dat.deckIndCounter++;
-	}
-	if (dat.selectState == 0) {
-		if (dat.chrCounter < 15)
-			dat.chrCounter++;
-	} else {
-		if (dat.chrCounter)
-			dat.chrCounter--;
-	}
-
-	if (dat.deckIndCounter <= 0)
-		offset = 0;
-	else if (dat.deckIndCounter >= 0xF)
-		offset = 1;
-	else
-		offset = (dat.deckIndCounter * dat.deckIndCounter) / (15.f * 15.f);
-
-	if (i == 0)
-		dat.colorSelect->y1 = 150 - offset * 150;
-	else
-		dat.colorSelect->y1 = -150 + offset * 150;
-	dat.deckSelect->x1 = -280 + 280 * offset;
-	dat.circleSprite.rotation += 0.5;
-	if (dat.object)
-		dat.object->advanceFrame();
 
 	if (!dat.input)
 		return;
 	switch (dat.selectState) {
 	case 0:
-		dat.chrHandler.keys = &dat.input->input;
+		dat.chrHandler.axis = &dat.input->input.horizontalAxis;
 		if (InputHandler_HandleInput(dat.chrHandler)) {
 			SokuLib::playSEWaveBuffer(0x27);
 			info.character = *((SokuLib::Character *(__thiscall *)(const void *, int))0x420380)(&This->offset_0x018[0x80], dat.chrHandler.pos);
@@ -1403,14 +1406,17 @@ void updateCharacterSelect2(const SokuLib::Select *This, unsigned i)
 
 			SokuLib::playSEWaveBuffer(0x28);
 			dat.selectState = 1;
+			changePalette(This, i + 2, info.palette, true);
 			sprintf(buffer, (char *)0x8578EC, info.character);
 			SokuLib::textureMgr.deallocate(dat.circleTexture);
 			if (!SokuLib::textureMgr.loadTexture(&dat.circleTexture, buffer, &size.x, &size.y))
 				printf("Failed to load %s\n", buffer);
 			dat.circleSprite.setTexture(dat.circleTexture, 0, 0, size.x, size.y, size.x / 2, size.y / 2);
 			((void (__thiscall *)(CEffectManager *))dat.effectMgr.vtable[2])(&dat.effectMgr);
+			// data/character/%s/palette%d.bmp
 			sprintf(buffer, (char *)0x8578C8, name, info.palette);
 			((void (__thiscall *)(int, char *, int, int))0x408BE0)(0x8A0048, buffer, 0x896B88, 0x10);
+			// data/scene/select/character/%s/stand.xml
 			sprintf(buffer, (char *)0x85789C, name);
 			((void (__thiscall *)(CEffectManager *, char *, int))dat.effectMgr.vtable[1])(&dat.effectMgr, buffer, 0);
 			dat.object = ((SokuLib::v2::AnimationObject *(__thiscall *)(CEffectManager *, int, float, float, int, int, int))dat.effectMgr.vtable[3])(&dat.effectMgr, 0, dat.charObject->x2, dat.charObject->y2, 1, 0, 0);
@@ -1425,9 +1431,28 @@ void updateCharacterSelect2(const SokuLib::Select *This, unsigned i)
 		}
 		break;
 	case 1:
+		dat.palHandler.axis = &dat.input->input.verticalAxis;
+		if (InputHandler_HandleInput(dat.palHandler)) {
+			char *name = getCharName(info.character);
+			int poseId = dat.object->frameState.poseId;
+			int poseFrame = dat.object->frameState.poseFrame;
+
+			changePalette(This, i + 2, dat.palHandler.pos, *dat.palHandler.axis > 0);
+			SokuLib::playSEWaveBuffer(0x27);
+			((void (__thiscall *)(CEffectManager *))dat.effectMgr.vtable[2])(&dat.effectMgr);
+			// data/character/%s/palette%d.bmp
+			sprintf(buffer, (char *)0x8578C8, name, info.palette);
+			((void (__thiscall *)(int, char *, int, int))0x408BE0)(0x8A0048, buffer, 0x896B88, 0x10);
+			// data/scene/select/character/%s/stand.xml
+			sprintf(buffer, (char *)0x85789C, name);
+			((void (__thiscall *)(CEffectManager *, char *, int))dat.effectMgr.vtable[1])(&dat.effectMgr, buffer, 0);
+			dat.object = ((SokuLib::v2::AnimationObject *(__thiscall *)(CEffectManager *, int, float, float, int, int, int))dat.effectMgr.vtable[3])(&dat.effectMgr, 0, dat.charObject->x2, dat.charObject->y2, 1, 0, 0);
+			dat.object->setPose(poseId);
+			dat.object->frameState.poseFrame = poseFrame;
+		}
 		if (dat.input->input.a == 1) {
 			SokuLib::playSEWaveBuffer(0x28);
-			dat.object->setPose(1);
+			dat.object->setAction(1);
 			dat.selectState = 3;
 		} else if (dat.input->input.b == 1) {
 			SokuLib::playSEWaveBuffer(0x29);
@@ -1445,7 +1470,7 @@ void updateCharacterSelect2(const SokuLib::Select *This, unsigned i)
 	}
 }
 
-bool updateCharacterSelect(const SokuLib::Select *This)
+bool updateCharacterSelect(SokuLib::Select *This)
 {
 	updateCharacterSelect2(This, 0U);
 	updateCharacterSelect2(This, 1U);
@@ -1493,15 +1518,7 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	ogBattleMgrOnRender  = SokuLib::TamperDword(&SokuLib::VTable_BattleManager.onRender,  CBattleManager_OnRender);
 	ogBattleMgrOnProcess = SokuLib::TamperDword(&SokuLib::VTable_BattleManager.onProcess, CBattleManager_OnProcess);
 	ogSelectOnProcess = SokuLib::TamperDword(&SokuLib::VTable_Select.onProcess, CSelect_OnProcess);
-	ogSelectCLOnProcess = SokuLib::TamperDword(&SokuLib::VTable_SelectClient.onProcess, CSelectCL_OnProcess);
-	ogSelectSVOnProcess = SokuLib::TamperDword(&SokuLib::VTable_SelectServer.onProcess, CSelectSV_OnProcess);
 	ogHudRender = (int (__thiscall *)(void *))SokuLib::TamperDword(0x85b544, onHudRender);
-	// s_origCLogo_OnProcess   = TamperDword(vtbl_CLogo   + 4, (DWORD)CLogo_OnProcess);
-	// s_origCBattle_OnProcess = TamperDword(vtbl_CBattle + 4, (DWORD)CBattle_OnProcess);
-	// s_origCBattleSV_OnProcess = TamperDword(vtbl_CBattleSV + 4, (DWORD)CBattleSV_OnProcess);
-	// s_origCBattleCL_OnProcess = TamperDword(vtbl_CBattleCL + 4, (DWORD)CBattleCL_OnProcess);
-	// s_origCTitle_OnProcess  = TamperDword(vtbl_CTitle  + 4, (DWORD)CTitle_OnProcess);
-	// s_origCSelect_OnProcess = TamperDword(vtbl_CSelect + 4, (DWORD)CSelect_OnProcess);
 	::VirtualProtect((PVOID)RDATA_SECTION_OFFSET, RDATA_SECTION_SIZE, old, &old);
 	::VirtualProtect((PVOID)TEXT_SECTION_OFFSET, TEXT_SECTION_SIZE, PAGE_EXECUTE_WRITECOPY, &old);
 	ogBattleMgrHandleCollision = SokuLib::TamperNearJmpOpr(0x47d618, CBattleManager_HandleCollision);
@@ -1598,7 +1615,8 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	*(char *)0x43E6D6 = 0x02;
 	*(char *)0x43E6D7 = 0x5E;
 	*(char *)0x43E6D8 = 0xC3;
-	*(int *)0x43E72D = 0x8986A8;
+	*(char *)0x43E72C = 0xB8;
+	*(int  *)0x43E72D = 0x8986A8;
 	SokuLib::TamperNearCall(0x43E731, setInputPointer);
 	*(char *)0x43E736 = 0x90;
 	SokuLib::TamperNearCall(0x43E723, setInputPointer);
@@ -1627,6 +1645,9 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	SokuLib::TamperNearJmp(0x4208ED, updateCharacterSelect_hook);
 	*(char *)0x4208F2 = 0x90;
 	*(char *)0x4208F3 = 0x90;
+
+	memset((void *)0x46012A, 0x90, 13);
+	memset((void *)0x4622A4, 0x90, 13);
 
 	og_handleInputs = SokuLib::TamperNearJmpOpr(0x48224D, handlePlayerInputs);
 	s_origLoadDeckData = SokuLib::TamperNearJmpOpr(0x437D23, loadDeckData);
