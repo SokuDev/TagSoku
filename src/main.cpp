@@ -717,15 +717,11 @@ void __stdcall loadDeckData(char *charName, void *csvFile, SokuLib::DeckInfo &de
 
 		puts("Not spawned. Loading both assisters");
 		puts("Loading character 1");
-		if (assists.first.character == SokuLib::CHARACTER_RANDOM)
-			assists.first.character = static_cast<SokuLib::Character>(sokuRand(20));
 		((void (__thiscall *)(GameDataManager*, int, SokuLib::PlayerInfo &))0x46da40)(dataMgr, 2, assists.first);
 		(*(void (__thiscall **)(SokuLib::CharacterManager *))(*(int *)dataMgr->players[2] + 0x44))(dataMgr->players[2]);
 		players[2] = dataMgr->players[2];
 
 		puts("Loading character 2");
-		if (assists.second.character == SokuLib::CHARACTER_RANDOM)
-			assists.second.character = static_cast<SokuLib::Character>(sokuRand(20));
 		((void (__thiscall *)(GameDataManager*, int, SokuLib::PlayerInfo &))0x46da40)(dataMgr, 3, assists.second);
 		(*(void (__thiscall **)(SokuLib::CharacterManager *))(*(int *)dataMgr->players[3] + 0x44))(dataMgr->players[3]);
 		players[3] = dataMgr->players[3];
@@ -1255,6 +1251,9 @@ void __fastcall renderChrSelectChrDataGear(int index)
 	auto &dat = chrSelectExtra[index];
 
 	dat.gearSprite.rotation = dat.cursor->x1 * 2.5;
+	dat.gearSprite.setColor(0xFF000000);
+	dat.gearSprite.render(dat.cursor->x1 + dat.gear->x2 + 2, dat.gear->y2);
+	dat.gearSprite.setColor(0xFFFFFFFF);
 	dat.gearSprite.render(dat.cursor->x1 + dat.gear->x2, dat.gear->y2);
 }
 
@@ -1271,7 +1270,7 @@ void __fastcall renderChrSelectChrName(SokuLib::Select *This, int index)
 	else
 		offset = (dat.charNameCounter * dat.charNameCounter) / (15.f * 15.f);
 	This->charNameSprites[info.character == SokuLib::CHARACTER_RANDOM ? 20 : info.character].render(offset * 200 + dat.name->x2, dat.name->y2);
-	if (dat.object) {
+	if (dat.object && info.character != SokuLib::CHARACTER_RANDOM) {
 		if (dat.chrCounter <= 0)
 			offset = 0;
 		else if (dat.chrCounter >= 0xF)
@@ -1494,6 +1493,31 @@ void __declspec(naked) updateCharacterSelect_hook()
 	}
 }
 
+void onChrSelectComplete()
+{
+	if (assists.first.character == SokuLib::CHARACTER_RANDOM)
+		assists.first.character = static_cast<SokuLib::Character>(sokuRand(20));
+	if (assists.second.character == SokuLib::CHARACTER_RANDOM)
+		assists.second.character = static_cast<SokuLib::Character>(sokuRand(20));
+}
+
+void __fastcall onStageSelectCancel(SokuLib::Select *This, int index)
+{
+	if ((&assists.first)[index].character == SokuLib::CHARACTER_RANDOM)
+		(&assists.first)[index].character = (*(SokuLib::Character **)&This->offset_0x018[0x84])[chrSelectExtra[index].chrHandler.pos];
+	chrSelectExtra[index].selectState = 0;
+	chrSelectExtra[index].input = chrSelectExtraInputs[index];
+}
+
+void __declspec(naked) onStageSelectCancel_hook()
+{
+	__asm {
+		MOV EDX, EBP
+		MOV ECX, ESI
+		JMP onStageSelectCancel
+	}
+}
+
 void onCharacterSelectInit()
 {
 	chrSelectExtraInputs[0] = nullptr;
@@ -1590,6 +1614,8 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	*(char *)0x47D193 = 0x90;
 	*(char *)0x47D194 = 0x90;
 
+	new SokuLib::Trampoline(0x4209F6, onChrSelectComplete, 6);
+	new SokuLib::Trampoline(0x42151E, onStageSelectCancel_hook, 6);
 
 	SokuLib::TamperNearCall(0x43890E, getOgHud);
 	*(char *)0x438913 = 0x90;
