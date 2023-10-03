@@ -164,10 +164,7 @@ struct RivControl {
 };
 
 static unsigned char (__fastcall *og_advanceFrame)(SokuLib::CharacterManager *);
-static int (SokuLib::BattleWatch::*ogBattleWatchOnProcess)();
 static int (SokuLib::Select::*ogSelectOnProcess)();
-static int (SokuLib::SelectClient::*ogSelectCLOnProcess)();
-static int (SokuLib::SelectServer::*ogSelectSVOnProcess)();
 static int (SokuLib::BattleManager::*ogBattleMgrOnProcess)();
 static void (SokuLib::BattleManager::*ogBattleMgrOnRender)();
 static void (__fastcall *og_handleInputs)(SokuLib::CharacterManager *);
@@ -244,8 +241,8 @@ auto initInputManagerArray = (SokuLib::KeyManager *(*)(int index, bool))0x43E6A0
 static std::pair<SokuLib::KeymapManager, SokuLib::KeymapManager> keymaps;
 static std::pair<SokuLib::KeyManager, SokuLib::KeyManager> keys{{&keymaps.first}, {&keymaps.second}};
 static std::pair<SokuLib::PlayerInfo, SokuLib::PlayerInfo> assists = {
-	SokuLib::PlayerInfo{SokuLib::CHARACTER_REIMU, 0, 0, 0, 0, {}, &keys.first},
-	SokuLib::PlayerInfo{SokuLib::CHARACTER_REIMU, 1, 0, 0, 0, {}, &keys.second}
+	SokuLib::PlayerInfo{SokuLib::CHARACTER_CIRNO, 0, 0, 0, 0, {}, &keys.first},
+	SokuLib::PlayerInfo{SokuLib::CHARACTER_MARISA, 1, 0, 0, 0, {}, &keys.second}
 };
 
 static void drawBox(const SokuLib::Box &box, const SokuLib::RotationBox *rotation, SokuLib::Color borderColor, SokuLib::Color fillColor)
@@ -467,6 +464,10 @@ int __fastcall CSelect_OnProcess(SokuLib::Select *This)
 {
 	int ret = (This->*ogSelectOnProcess)();
 
+	if (ret == SokuLib::SCENE_TITLE) {
+		assists.first.character = SokuLib::CHARACTER_CIRNO;
+		assists.second.character = SokuLib::CHARACTER_MARISA;
+	}
 	for (int i = 0; i < 2; i++) {
 		auto &dat = chrSelectExtra[i];
 		float offset;
@@ -895,9 +896,9 @@ static int extraHealing[2];
 void __declspec(naked) setHealthRegen()
 {
 	__asm {
-		MOV dword ptr [ESP + 0x20], ECX
 		MOVSX EAX, byte ptr [ECX + 0x14E]
 		MOVSX ECX, BX
+		MOV dword ptr [ESP + 0x20], ECX
 		CMP AL, 2
 		JLE dontSkip
 		DEC EAX
@@ -914,32 +915,32 @@ void __declspec(naked) addHealthRegen()
 	__asm {
 		CALL SokuLib::getBattleMgr
 		MOV EBX, [EAX + 0x14]
-		MOV EDI, [EBX + 0x186]
-		MOV ECX, [EBX + 0x68]
-		ADD ECX, [extraHealing]
-		CMP ECX, EDI
-		JL lower1
-		MOV ECX, EDI
-	lower1:
-		CMP ECX, 0x0
-		JG higher1
-		MOV ECX, 1
-	higher1:
-		MOV [EBX + 0x68], CX
+		MOVSX DI, word ptr [EBX + 0x186]
+		MOVSX CX, word ptr [EBX + 0x184]
+		ADD ECX, dword ptr [extraHealing]
+		CMP CX, DI
+		JL lowerThanMax1
+		MOV CX, DI
+	lowerThanMax1:
+		CMP CX, 0x0
+		JG higherThanZero1
+		MOV ECX, 0
+	higherThanZero1:
+		MOV [EBX + 0x184], CX
 
 		MOV EBX, [EAX + 0x18]
-		MOV EDI, [EBX + 0x186]
-		MOV ECX, [EBX + 0x68]
-		ADD ECX, [extraHealing + 4]
-		CMP ECX, EDI
-		JL lower2
-		MOV ECX, EDI
-	lower2:
-		CMP ECX, 0x0
-		JG higher2
-		MOV ECX, 1
-	higher2:
-		MOV [EBX + 0x68], CX
+		MOVSX DI, word ptr [EBX + 0x186]
+		MOVSX CX, word ptr [EBX + 0x184]
+		ADD ECX, dword ptr [extraHealing + 4]
+		CMP CX, DI
+		JL lowerThanMax2
+		MOV CX, DI
+	lowerThanMax2:
+		CMP CX, 0x0
+		JG higherThanZero2
+		MOV ECX, 0
+	higherThanZero2:
+		MOV [EBX + 0x184], CX
 		RET
 	}
 }
@@ -999,8 +1000,10 @@ SokuLib::Select *__fastcall CSelect_construct(SokuLib::Select *This)
 		dat.object = nullptr;
 		dat.selectState = 0;
 		dat.chrHandler.maxValue = 20;
-		dat.chrHandler.pos = 10 - i;
-		dat.chrHandler.posCopy = 10 - i;
+		dat.chrHandler.pos = 0;
+		while ((*(unsigned **)&This->offset_0x018[0x84])[dat.chrHandler.pos] != profileInfo.character)
+			dat.chrHandler.pos++;
+		dat.chrHandler.posCopy = dat.chrHandler.pos;
 		dat.palHandler.maxValue = 8;
 		dat.palHandler.pos = 0;
 		dat.palHandler.posCopy = 0;
@@ -1014,7 +1017,6 @@ SokuLib::Select *__fastcall CSelect_construct(SokuLib::Select *This)
 		dat.cursor->x1 = 700 * i - 50;
 		dat.isInit = true;
 		((void (__thiscall *)(CEffectManager  *))0x422CF0)(&dat.effectMgr);
-		profileInfo.character = *((SokuLib::Character *(__thiscall *)(const void *, int))0x420380)(&This->offset_0x018[0x80], dat.chrHandler.pos);
 		profileInfo.palette = 0;
 		profileInfo.deck = 0;
 		// data/scene/select/character/09b_character/character_%02d.bmp
@@ -1544,6 +1546,8 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 
 	// Enable 4 characters inputs
 	*(char *)0x48219D = 0x4;
+	// Disable inputs for all 4 characters in transitions
+	*(char *)0x479714 = 0x4;
 
 	const unsigned char chrSelectInputInitPatch[] = {
 		// MOV [00898684],EBX
@@ -1580,7 +1584,12 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	*(char *)0x47B081 = 0x90;
 	*(char *)0x47B082 = 0x90;
 	new SokuLib::Trampoline(0x47D6E0, addHealthRegen, 7);
+	*(char *)0x47D6E5 = 0x90;
+	*(char *)0x47D6E6 = 0x90;
 	new SokuLib::Trampoline(0x47D18E, clearHealthRegen, 7);
+	*(char *)0x47D193 = 0x90;
+	*(char *)0x47D194 = 0x90;
+
 
 	SokuLib::TamperNearCall(0x43890E, getOgHud);
 	*(char *)0x438913 = 0x90;
