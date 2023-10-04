@@ -404,6 +404,30 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 
 	int ret = (This->*ogBattleMgrOnProcess)();
 
+	if (This->matchState <= 2 || This->matchState == 4) {
+		int i = 0;
+
+		for (; i < 4; i++) {
+			SokuLib::camera.offset_0x44 = &dataMgr->players[i]->objectBase.position.x;
+			SokuLib::camera.offset_0x48 = &dataMgr->players[i]->objectBase.position.x;
+			SokuLib::camera.offset_0x4C = &dataMgr->players[i]->objectBase.position.y;
+			SokuLib::camera.offset_0x50 = &dataMgr->players[i]->objectBase.position.y;
+			if (dataMgr->players[i]->objectBase.hp != 0)
+				break;
+		}
+		for (; i < 4; i++) {
+			if (dataMgr->players[i]->objectBase.hp == 0)
+				continue;
+			if (*SokuLib::camera.offset_0x44 > dataMgr->players[i]->objectBase.position.x)
+				SokuLib::camera.offset_0x44 = &dataMgr->players[i]->objectBase.position.x;
+			if (*SokuLib::camera.offset_0x48 < dataMgr->players[i]->objectBase.position.x)
+				SokuLib::camera.offset_0x48 = &dataMgr->players[i]->objectBase.position.x;
+			if (*SokuLib::camera.offset_0x4C > dataMgr->players[i]->objectBase.position.y)
+				SokuLib::camera.offset_0x4C = &dataMgr->players[i]->objectBase.position.y;
+			if (*SokuLib::camera.offset_0x50 < dataMgr->players[i]->objectBase.position.y)
+				SokuLib::camera.offset_0x50 = &dataMgr->players[i]->objectBase.position.y;
+		}
+	}
 	for (int i = 0; i < 4; i++) {
 		if (dataMgr->players[i]->keyManager->keymapManager->input.select == 1) {
 			int j = (i % 2) ^ 1;
@@ -417,7 +441,7 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 	if (!SokuLib::menuManager.empty() && SokuLib::sceneId == SokuLib::SCENE_BATTLE)
 		return ret;
 
-	*(bool *)0x89862E = true;
+	//*(bool *)0x89862E = true;
 	if (SokuLib::checkKeyOneshot(DIK_F8, false, false, false) && SokuLib::mainMode != SokuLib::BATTLE_MODE_VSSERVER && SokuLib::mainMode != SokuLib::BATTLE_MODE_VSCLIENT) {
 		This->currentRound = (This->currentRound + 1) % 3;
 		This->matchState = 0;
