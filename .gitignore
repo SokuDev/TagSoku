@@ -43,3 +43,4 @@ build
 *.cv2
 *.pat
 *.dat
+src/assets/output

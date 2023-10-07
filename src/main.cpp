@@ -695,10 +695,6 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 		dataMgr->players[3]->objectBase.opponent = &This->leftCharacterManager;
 		for (int i = 0; i < 4; i++)
 			dataMgr->players[i]->objectBase.offset_0x14E[0] = i;
-		dataMgr->players[0]->keyManager->keymapManager->bindings.select = 6;
-		dataMgr->players[1]->keyManager->keymapManager->bindings.select = 0;
-		dataMgr->players[2]->keyManager->keymapManager->bindings.select = 0;
-		dataMgr->players[3]->keyManager->keymapManager->bindings.select = 0;
 		init = true;
 	}
 
@@ -2751,11 +2747,11 @@ SokuLib::ProfileDeckEdit *__fastcall CProfileDeckEdit_Init(SokuLib::ProfileDeckE
 	profileSelectReady = true;
 	errorCounter = 0;
 	editSelectedDeck = 0;
-	if (editSelectedProfile != 2) {
+	if (editSelectedProfile != 4) {
 		loadedDecks[4] = loadedDecks[editSelectedProfile];
 		for (auto &val : loadedDecks[4])
 			val.second.push_back({"Create new deck", {21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21}});
-	} else if (loadedDecks[2][This->editedCharacter].empty()) {
+	} else if (loadedDecks[4][This->editedCharacter].empty()) {
 		loadedDecks[4] = loadedDecks[0];
 		for (auto &val : loadedDecks[4])
 			val.second.push_back({"Create new deck", {21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21}});
@@ -2825,7 +2821,7 @@ static bool loadOldProfileFile(nlohmann::json &json, std::map<unsigned char, std
 			std::sort(deck.cards.begin(), deck.cards.end());
 			map[i].push_back(deck);
 		}
-		if (index == 2)
+		if (index == 4)
 			map[i].push_back({"Create new deck", {21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21}});
 	}
 	return true;
@@ -2990,7 +2986,7 @@ static bool loadProfileFile(const std::string &path, std::ifstream &stream, std:
 		}
 		for (auto &elem : names)
 			map[elem.first].clear();
-		if (index == 2)
+		if (index == 4)
 			for (auto &elem : map)
 				elem.second.push_back({"Create new deck", {21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21}});
 		return false;
@@ -3009,7 +3005,7 @@ static bool loadProfileFile(const std::string &path, std::ifstream &stream, std:
 	if (json.is_null()) {
 		for (auto &elem : names)
 			map[elem.first].clear();
-		if (index == 2)
+		if (index == 4)
 			for (auto &elem : map)
 				elem.second.push_back({"Create new deck", {21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21}});
 		return true;
@@ -3044,7 +3040,7 @@ static bool loadProfileFile(const std::string &path, std::ifstream &stream, std:
 			map[index].push_back(deck);
 		}
 	}
-	if (index == 2)
+	if (index == 4)
 		for (auto &elem : map)
 			elem.second.push_back({"Create new deck", {21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21}});
 	return true;
@@ -3061,7 +3057,7 @@ static void __fastcall handleProfileChange(SokuLib::Profile *This, char *arg)
 
 	while (index < 4 && This != profiles[index])
 		index++;
-	if (This == profiles[index])
+	if (index != 4)
 		loadedProfiles[index] = profileName;
 	printf("Loading %s in buffer %i\n", profile.c_str(), index);
 
@@ -3136,7 +3132,7 @@ static void onDeckSaved()
 
 	loadedDecks[4][menu->editedCharacter] = editedDecks;
 
-	auto toSave = loadedDecks[2];
+	auto toSave = loadedDecks[4];
 
 	for (auto &elem : toSave)
 		elem.second.pop_back();
@@ -3302,6 +3298,14 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	memcpy((void*)0x43EA13, chrSelectInputInitPatch, sizeof(chrSelectInputInitPatch));
 
 	new SokuLib::Trampoline(0x4796EE, updateOtherHud, 5);
+
+	// Extra key in key config
+	*(char *)0x4512AC = 0x8;
+	*(char *)0x4511EA = 0xC;
+	*(char *)0x45135A = 0xC;
+	*(char *)0x4513A7 = 0xC;
+	*(char *)0x451650 = 0xC;
+	*(char *)0x4514DC = 0xC;
 
 	og_switchBattleStateBreakAddr = (void *)SokuLib::TamperNearJmpOpr(0x481F58, healExtraChrs);
 	og_advanceFrame = SokuLib::TamperNearJmpOpr(0x48535D, checkWakeUp);

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout version="4">
+	<static id="100" xposition="0" yposition="0" mirror="0">
+		<image name="000_Title.bmp" xposition="20" yposition="13" width="270" height="61"/>
+	</static>
+	<static id="103" xposition="96" yposition="151" mirror="0">
+		<image name="003_menu.bmp" xposition="0" yposition="0" width="384" height="257"/>
+	</static>
+	<static id="120" xposition="432" yposition="392" mirror="0">
+		<image name="020_On.bmp" xposition="2" yposition="1" width="25" height="15"/>
+	</static>
+	<static id="121" xposition="480" yposition="392" mirror="0">
+		<image name="021_Off.bmp" xposition="2" yposition="1" width="25" height="15"/>
+	</static>
+</layout>
