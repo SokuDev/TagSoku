@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout version="4">
+	<mutable id="0" xposition="0" yposition="0"/>
+	<number id="1000" xposition="76" yposition="124" width="36" height="35" fontspacing="10" textspacing="-7" size="0" floatsize="0">
+		<image name="comboFont.bmp" xposition="0" yposition="0" width="445" height="35"/>
+	</number>
+	<number id="1001" xposition="103" yposition="178" width="10" height="13" fontspacing="13" textspacing="-2" size="0" floatsize="1">
+		<image name="infoFont.bmp" xposition="0" yposition="0" width="125" height="13"/>
+	</number>
+	<number id="1002" xposition="103" yposition="191" width="10" height="13" fontspacing="13" textspacing="-2" size="0" floatsize="0">
+		<image name="infoFont.bmp" xposition="0" yposition="0" width="125" height="13"/>
+	</number>
+	<number id="1003" xposition="103" yposition="165" width="10" height="13" fontspacing="13" textspacing="-2" size="0" floatsize="0">
+		<image name="infoFont.bmp" xposition="0" yposition="0" width="125" height="13"/>
+	</number>
+	<static id="0" xposition="75" yposition="144" mirror="0">
+		<image name="hit.bmp" xposition="0" yposition="0" width="27" height="15"/>
+	</static>
+	<static id="0" xposition="75" yposition="144" mirror="0">
+		<image name="hit.bmp" xposition="0" yposition="0" width="27" height="15"/>
+	</static>
+	<static id="0" xposition="103" yposition="178" mirror="0">
+		<image name="info_percent.bmp" xposition="0" yposition="0" width="9" height="13"/>
+	</static>
+	<static id="0" xposition="103" yposition="191" mirror="0">
+		<image name="info_percent.bmp" xposition="0" yposition="0" width="9" height="13"/>
+	</static>
+	<static id="0" xposition="14" yposition="164" mirror="0">
+		<image name="damage.bmp" xposition="0" yposition="0" width="49" height="14"/>
+	</static>
+	<static id="0" xposition="14" yposition="191" mirror="0">
+		<image name="limit.bmp" xposition="0" yposition="0" width="31" height="12"/>
+	</static>
+	<static id="0" xposition="14" yposition="178" mirror="0">
+		<image name="rate.bmp" xposition="0" yposition="0" width="29" height="12"/>
+	</static>
+	<static id="2100" xposition="14" yposition="210" mirror="0">
+		<image name="chainArts.bmp" xposition="0" yposition="0" width="54" height="10"/>
+	</static>
+	<static id="2101" xposition="14" yposition="210" mirror="0">
+		<image name="chainSpell.bmp" xposition="0" yposition="0" width="57" height="12"/>
+	</static>
+	<static id="2102" xposition="14" yposition="210" mirror="0">
+		<image name="counterHit.bmp" xposition="0" yposition="0" width="60" height="10"/>
+	</static>
+	<static id="2103" xposition="14" yposition="210" mirror="0">
+		<image name="RiftAttack.bmp" xposition="0" yposition="0" width="56" height="10"/>
+	</static>
+	<static id="2104" xposition="14" yposition="210" mirror="0">
+		<image name="smashAttack.bmp" xposition="0" yposition="0" width="71" height="10"/>
+	</static>
+	<static id="2105" xposition="14" yposition="210" mirror="0">
+		<image name="borderResist.bmp" xposition="0" yposition="0" width="71" height="10"/>
+	</static>
+</layout>

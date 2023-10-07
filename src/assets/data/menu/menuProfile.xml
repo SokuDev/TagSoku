@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout version="4">
+	<static id="100" xposition="188" yposition="8" mirror="0">
+		<image name="chr_profile1.bmp" xposition="0" yposition="12" width="216" height="20"/>
+	</static>
+	<static id="101" xposition="212" yposition="32" mirror="0">
+		<image name="chr_profile2.bmp" xposition="0" yposition="13" width="216" height="19"/>
+	</static>
+	<static id="102" xposition="392" yposition="8" mirror="0">
+		<image name="chr_profile3.bmp" xposition="0" yposition="12" width="216" height="20"/>
+	</static>
+	<static id="103" xposition="416" yposition="32" mirror="0">
+		<image name="chr_profile4.bmp" xposition="0" yposition="13" width="216" height="19"/>
+	</static>
+</layout>
