@@ -3204,6 +3204,18 @@ void __declspec(naked) selectProfileSpriteColor()
 	}
 }
 
+void chrSelect_pushActiveInputs()
+{
+	SokuLib::Select *This;
+	auto unkSTL_push = (void (__thiscall *)(void *, void *))0x44BFE0;
+
+	__asm MOV This, ESI;
+	if (chrSelectExtra[0].input)
+		unkSTL_push(&This->offset_0x018[0x60], &chrSelectExtra[0].input);
+	if (chrSelectExtra[1].input)
+		unkSTL_push(&This->offset_0x018[0x60], &chrSelectExtra[1].input);
+}
+
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
 	DWORD old;
 
@@ -3373,6 +3385,7 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	SokuLib::TamperNearCall(0x422871, initExtraInputsLight_hook);
 
 	new SokuLib::Trampoline(0x43EA0D, onCharacterSelectInit, 6);
+	new SokuLib::Trampoline(0x42296C, chrSelect_pushActiveInputs, 5);
 
 	og_SelectConstruct = SokuLib::TamperNearJmpOpr(0x41E55F, CSelect_construct);
 
