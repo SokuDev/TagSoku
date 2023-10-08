@@ -1342,7 +1342,7 @@ void loadExtraPlayerInputs(int a, int b, int c, int d)
 		key->bindings.index = getInputManagerIndex(i + 2);
 		if (key->bindings.index < 0)
 			key->bindings.index = 0xFF;
-		memcpy(&key->bindings.up, &((key->bindings.index & 0x80) ? profiles[2]->keyboardBindings : profiles[2]->controllerBindings).up, sizeof(key->bindings) - 4);
+		memcpy(&key->bindings.up, &((key->bindings.index & 0x80) ? profiles[2 + i]->keyboardBindings : profiles[2 + i]->controllerBindings).up, sizeof(key->bindings) - 4);
 		key++;
 	}
 }
