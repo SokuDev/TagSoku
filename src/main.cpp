@@ -2539,6 +2539,23 @@ void loadProfile(const char *path, SokuLib::Profile *profileObj, const char *def
 	createProfileSprite(profileObj, r, g, b);
 }
 
+void reloadProfile(SokuLib::Profile *profileObj, const char *defaultVal, unsigned char r, unsigned char g, unsigned char b)
+{
+	auto initProfile = (void (__thiscall *)(SokuLib::Profile *))0x4358C0;
+	auto reloadProfile = (bool (__thiscall *)(SokuLib::Profile *))0x4355F0;
+	auto saveProfile = (void (__thiscall *)(SokuLib::Profile *, const char *path))0x434FB0;
+	auto changeProfile = (bool (__thiscall *)(SokuLib::Profile *, const char *path))0x435300;
+	auto createProfileSprite = (void (__thiscall *)(SokuLib::Profile *This, unsigned char r, unsigned char g, unsigned char b))0x434C80;
+
+	if (!reloadProfile(profileObj)) {
+		if (changeProfile(profileObj, defaultVal)) {
+			initProfile(profileObj);
+			saveProfile(profileObj, defaultVal);
+		}
+	}
+	createProfileSprite(profileObj, r, g, b);
+}
+
 static void saveProfiles()
 {
 	std::ofstream s1{"profile3p.txt"};
@@ -2546,6 +2563,12 @@ static void saveProfiles()
 
 	s1 << loadedProfiles[2];
 	s2 << loadedProfiles[3];
+}
+
+static void reloadProfiles()
+{
+	reloadProfile(profiles[2], "profile3p.pf", 0xA0, 0xA0, 0xFF);
+	reloadProfile(profiles[3], "profile4p.pf", 0xFF, 0x80, 0x80);
 }
 
 static void initAssets()
@@ -3411,6 +3434,7 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	memset(extraProfiles, 0, sizeof(extraProfiles));
 	*(int *)&profiles[2]->sprite = 0x8576AC;
 	*(int *)&profiles[3]->sprite = 0x8576AC;
+	SokuLib::TamperNearJmp(0x43E006, reloadProfiles);
 
 	const unsigned char profileExtraInit[] = {
 		// The top part here is exactly what the game did before but shorter in size to fit more assembly
