@@ -662,12 +662,6 @@ static void drawPlayerBoxes(const SokuLib::CharacterManager &manager, bool playe
 	}
 }
 
-void updateObject(SokuLib::CharacterManager *main, SokuLib::CharacterManager *mgr)
-{
-	if (mgr->timeStop && !main->timeStop)
-		main->timeStop = 1;
-}
-
 static int ctr = 0;
 
 int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
@@ -747,32 +741,16 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 	if (!SokuLib::menuManager.empty() && SokuLib::sceneId == SokuLib::SCENE_BATTLE)
 		return ret;
 
-	//*(bool *)0x89862E = true;
 	if (SokuLib::checkKeyOneshot(DIK_F8, false, false, false) && SokuLib::mainMode != SokuLib::BATTLE_MODE_VSSERVER && SokuLib::mainMode != SokuLib::BATTLE_MODE_VSCLIENT) {
 		This->currentRound = (This->currentRound + 1) % 3;
 		This->matchState = 0;
 		anim = false;
 	}
 
-	auto left  = players[0];
-	auto right = players[1];
-
-	if (left->timeStop || right->timeStop) {
-		if (players[2]->timeStop)
-			updateObject(left, players[2]);
-		if (players[3]->timeStop)
-			updateObject(right, players[3]);
-	} else {
-		if (!players[3]->timeStop)
-			updateObject(left, players[2]);
-		if (!players[2]->timeStop)
-			updateObject(right, players[3]);
-	}
-
-	if (players[2]->timeStop || players[3]->timeStop) {
-		left->timeStop  = max(left->timeStop  + 1, 2);
-		right->timeStop = max(right->timeStop + 1, 2);
-	}
+	if (players[2]->timeStop)
+		players[0]->timeStop = max(players[0]->timeStop + 1, 2);
+	if (players[3]->timeStop)
+		players[1]->timeStop = max(players[1]->timeStop + 1, 2);
 
 	if (This->matchState == 3) {
 		players[0]->kdAnimationFinished = players[0]->kdAnimationFinished || players[2]->kdAnimationFinished;
@@ -2542,7 +2520,9 @@ static void loadAllExistingCards()
 
 void loadProfile(const char *path, SokuLib::Profile *profileObj, const char *defaultVal, unsigned char r, unsigned char g, unsigned char b)
 {
-	auto changeProfile = (void (__thiscall *)(SokuLib::Profile *, const char *path))0x435300;
+	auto initProfile = (bool (__thiscall *)(SokuLib::Profile *))0x4358C0;
+	auto saveProfile = (bool (__thiscall *)(SokuLib::Profile *, const char *path))0x434FB0;
+	auto changeProfile = (bool (__thiscall *)(SokuLib::Profile *, const char *path))0x435300;
 	std::ifstream stream{path};
 	std::string profile;
 	auto createProfileSprite = (void (__thiscall *)(SokuLib::Profile *This, unsigned char r, unsigned char g, unsigned char b))0x434C80;
@@ -2550,7 +2530,12 @@ void loadProfile(const char *path, SokuLib::Profile *profileObj, const char *def
 	stream >> profile;
 	if (!stream)
 		profile = defaultVal;
-	changeProfile(profileObj, (profile + ".pf").c_str());
+	if (!changeProfile(profileObj, (profile + ".pf").c_str())) {
+		if (defaultVal == profile || changeProfile(profileObj, (std::string(defaultVal) + ".pf").c_str())) {
+			initProfile(profileObj);
+			saveProfile(profileObj, (std::string(defaultVal) + ".pf").c_str());
+		}
+	}
 	createProfileSprite(profileObj, r, g, b);
 }
 
@@ -2571,8 +2556,8 @@ static void initAssets()
 	loadAllExistingCards();
 	loadDefaultDecks();
 	loadCardAssets();
-	loadProfile("profile3p.txt", profiles[2], "profile1p", 0xA0, 0xA0, 0xFF);
-	loadProfile("profile4p.txt", profiles[3], "profile2p", 0xFF, 0x80, 0x80);
+	loadProfile("profile3p.txt", profiles[2], "profile3p", 0xA0, 0xA0, 0xFF);
+	loadProfile("profile4p.txt", profiles[3], "profile4p", 0xFF, 0x80, 0x80);
 }
 
 int __fastcall CProfileDeckEdit_OnProcess(SokuLib::ProfileDeckEdit *This)
@@ -3426,6 +3411,35 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	memset(extraProfiles, 0, sizeof(extraProfiles));
 	*(int *)&profiles[2]->sprite = 0x8576AC;
 	*(int *)&profiles[3]->sprite = 0x8576AC;
+
+	const unsigned char profileExtraInit[] = {
+		// The top part here is exactly what the game did before but shorter in size to fit more assembly
+		// Before the game did:
+		// mov [esi+00000188],0x00000000
+		// mov [esi+0000018C],0x00000001
+		// ...
+		0x31, 0xC0,                                                // xor eax,eax
+		0x89, 0x86, 0x88, 0x01, 0x00, 0x00,                        // mov [esi+00000188],eax
+		0x40,                                                      // inc eax
+		0x89, 0x86, 0x8C, 0x01, 0x00, 0x00,                        // mov [esi+0000018C],eax
+		0x40,                                                      // inc eax
+		0x89, 0x86, 0x90, 0x01, 0x00, 0x00,                        // mov [esi+00000190],eax
+		0x40,                                                      // inc eax
+		0x89, 0x86, 0x94, 0x01, 0x00, 0x00,                        // mov [esi+00000194],eax
+		0x40,                                                      // inc eax
+		0x89, 0x86, 0x98, 0x01, 0x00, 0x00,                        // mov [esi+00000198],eax
+		0x40,                                                      // inc eax
+		0x89, 0x86, 0x9C, 0x01, 0x00, 0x00,                        // mov [esi+0000019C],eax
+		0x40,                                                      // inc eax
+		0x89, 0x86, 0xA0, 0x01, 0x00, 0x00,                        // mov [esi+000001A0],eax
+		0x40,                                                      // inc eax
+		0x89, 0x86, 0xA4, 0x01, 0x00, 0x00,                        // mov [esi+000001A4],eax
+		0x90,                                                      // nop
+		0x90,                                                      // nop
+		0x90,                                                      // nop
+		0xC7, 0x86, 0x70, 0x01, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00 // mov [esi+00000170],0000001C
+	};
+	memcpy((void*)0x435988, profileExtraInit, sizeof(profileExtraInit));
 
 	og_handleInputs = SokuLib::TamperNearJmpOpr(0x48224D, handlePlayerInputs);
 	s_origLoadDeckData = SokuLib::TamperNearJmpOpr(0x437D23, loadDeckData);
