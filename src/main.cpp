@@ -747,10 +747,14 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 		anim = false;
 	}
 
-	if (players[2]->timeStop)
+	if (players[2]->timeStop > 1)
 		players[0]->timeStop = max(players[0]->timeStop + 1, 2);
-	if (players[3]->timeStop)
+	else if (players[0]->timeStop > 1)
+		players[2]->timeStop = max(players[2]->timeStop + 1, 2);
+	if (players[3]->timeStop > 1)
 		players[1]->timeStop = max(players[1]->timeStop + 1, 2);
+	else if (players[1]->timeStop > 1)
+		players[3]->timeStop = max(players[3]->timeStop + 1, 2);
 
 	if (This->matchState == 3) {
 		players[0]->kdAnimationFinished = players[0]->kdAnimationFinished || players[2]->kdAnimationFinished;
@@ -3054,10 +3058,11 @@ static bool loadProfileFile(const std::string &path, std::ifstream &stream, std:
 	return true;
 }
 
-static void __fastcall handleProfileChange(SokuLib::Profile *This, char *arg)
+static void __fastcall handleProfileChange(SokuLib::Profile *This, SokuLib::String *val)
 {
 	initAssets();
 
+	const char *arg = *val;
 	std::string profileName{arg, strstr(arg, ".pf")};
 	std::string profile = "profile/" + profileName + ".json";
 	int index = 0;
@@ -3125,7 +3130,6 @@ void __declspec(naked) onProfileChanged()
 	__asm {
 		MOV ECX, ESI;
 		MOV EDX, [ESP + 0x18];
-		ADD EDX, 0x4
 		JMP handleProfileChange
 	}
 }
