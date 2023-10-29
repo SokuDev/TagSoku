@@ -1,0 +1,88 @@
+{
+    "5a": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "startup": 15,
+            "action": 408,
+            "offsetX": -100,
+            "speedX": 10,
+            "recovery": 120
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "startup": 15,
+            "action": 408,
+            "offsetX": -100,
+            "speedX": 10,
+            "posY": 0,
+            "recovery": 120
+        }
+    },
+    "5b": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 401,
+            "recovery": 180
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 401,
+            "posY": 0,
+            "recovery": 180
+        }
+    },
+    "5c": {
+        "ground": {
+            "cd": 480,
+            "nb": 1,
+            "action": 410,
+            "recovery": 160
+        },
+        "air": {
+            "cd": 480,
+            "nb": 1,
+            "action": 414,
+            "recovery": 160
+        }
+    },
+    "6c": {
+        "ground": {
+            "cd": 480,
+            "nb": 1,
+            "action": 411,
+            "recovery": 160
+        },
+        "air": {
+            "cd": 480,
+            "nb": 1,
+            "action": 415,
+            "recovery": 160
+        }
+    },
+    "2c": {
+        "ground": {
+            "cd": 480,
+            "nb": 1,
+            "action": 412,
+            "recovery": 160
+        },
+        "air": {
+            "cd": 480,
+            "nb": 1,
+            "action": 416,
+            "recovery": 160
+        }
+    },
+    "4c": {
+        "ground": {
+            "cd": 480,
+            "nb": 1,
+            "action": 419,
+            "recovery": 160
+        }
+    }
+}

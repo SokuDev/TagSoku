@@ -1,0 +1,92 @@
+{
+    "5a": {
+        "ground": {
+            "start": 200,
+            "startMin": 10,
+            "startMax": 40,
+            "startKeys": [1, 0, 0, 0, 0, 0, 0, 0],
+            "cd": 240,
+            "nb": 4,
+            "action": 303,
+            "offsetX": -10,
+            "recovery": 120
+        },
+        "air": {
+            "start": 202,
+            "startMin": 10,
+            "startMax": 30,
+            "startKeys": [1, 0, 0, 0, 0, 0, 0, 0],
+            "cd": 300,
+            "nb": 1,
+            "action": 306,
+            "offsetX": -50,
+            "recovery": 150
+        }
+    },
+    "5b": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 410,
+            "offsetX": -50,
+            "recovery": 60,
+            "cond": "end"
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 410,
+            "speedY": 0,
+            "offsetX": -50,
+            "posY": 0,
+            "recovery": 60,
+            "cond": "end"
+        }
+    },
+    "5c": {
+        "ground": {
+            "cd": 360,
+            "nb": 1,
+            "action": 411,
+            "offsetX": -50,
+            "recovery": 60,
+            "cond": "end"
+        },
+        "air": {
+            "cd": 360,
+            "nb": 1,
+            "action": 415,
+            "speedY": 0,
+            "offsetX": -50,
+            "gravityY": 0,
+            "recovery": 60,
+            "cond": "end"
+        }
+    },
+    "5s": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 613,
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": 10,
+            "cost": 2,
+            "cardName": 213,
+            "canControl": true,
+            "recovery": 240
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 613,
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": 10,
+            "cost": 2,
+            "cardName": 213,
+            "canControl": true,
+            "recovery": 240
+        }
+    }
+}

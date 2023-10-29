@@ -1,0 +1,70 @@
+{
+    "5a": {
+        "ground": {
+            "start": 200,
+            "startMin": 10,
+            "startMax": 40,
+            "startKeys": [1, 0, 0, 0, 0, 0, 0, 0],
+            "cd": 240,
+            "nb": 4,
+            "action": 303,
+            "offsetX": -10,
+            "recovery": 120
+        },
+        "air": {
+            "start": 200,
+            "startMin": 10,
+            "startMax": 40,
+            "startKeys": [1, 0, 0, 0, 0, 0, 0, 0],
+            "cd": 240,
+            "nb": 4,
+            "action": 303,
+            "posY": 0,
+            "offsetX": -10,
+            "recovery": 120
+        }
+    },
+    "5b": {
+        "ground": {
+            "start": 202,
+            "startMin": 10,
+            "startMax": 30,
+            "startKeys": [1, 0, 0, 0, 0, 0, 0, 0],
+            "cd": 300,
+            "nb": 1,
+            "action": 306,
+            "speedY": 0,
+            "posY": 100,
+            "offsetX": -50,
+            "recovery": 150
+        },
+        "air": {
+            "start": 202,
+            "startMin": 10,
+            "startMax": 30,
+            "startKeys": [1, 0, 0, 0, 0, 0, 0, 0],
+            "cd": 300,
+            "nb": 1,
+            "action": 309,
+            "speedY": 0,
+            "recovery": 150
+        }
+    },
+    "5c": {
+        "ground": {
+            "cd": 420,
+            "nb": 1,
+            "action": 411,
+            "speedY": 0,
+            "recovery": 120
+        },
+        "air": {
+            "cd": 420,
+            "nb": 1,
+            "action": 411,
+            "speedY": 0,
+            "recovery": 120,
+            "posY": 0
+        }
+    }
+}

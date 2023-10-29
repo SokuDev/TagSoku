@@ -6,13 +6,13 @@
 #define VER_PRODUCTVERSION_STR      "1.0\0"
 
 #define VER_COMPANYNAME_STR         "SokuDev\0"
-#define VER_FILEDESCRIPTION_STR     "Makes Touhou 12.3 a 2v2\0"
-#define VER_INTERNALNAME_STR        "4PSoku\0"
+#define VER_FILEDESCRIPTION_STR     "Makes Touhou 12.3 a tag fighter\0"
+#define VER_INTERNALNAME_STR        "TagSoku\0"
 #define VER_LEGALCOPYRIGHT_STR      "PinkySmile,SokuDev\0"
 #define VER_LEGALTRADEMARKS1_STR    "\0"
 #define VER_LEGALTRADEMARKS2_STR    "\0"
-#define VER_ORIGINALFILENAME_STR    "4PSoku.dll\0"
-#define VER_PRODUCTNAME_STR         "4PSoku\0"
+#define VER_ORIGINALFILENAME_STR    "TagSoku.dll\0"
+#define VER_PRODUCTNAME_STR         "TagSoku\0"
 
 // Define this to 0 if not a pre release
 #define VER_PRERELEASE VS_FF_PRERELEASE

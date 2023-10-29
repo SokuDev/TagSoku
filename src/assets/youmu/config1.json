@@ -1,0 +1,118 @@
+{
+    "5a": {
+        "ground": {
+            "start": 301,
+            "startMin": 12,
+            "startMax": 12,
+            "cd": 300,
+            "nb": 1,
+            "action": 304,
+            "recovery": 120
+        },
+        "air": {
+            "start": 301,
+            "startMin": 12,
+            "startMax": 12,
+            "cd": 300,
+            "nb": 1,
+            "action": 304,
+            "posY": 0,
+            "recovery": 120
+        }
+    },
+    "2a": {
+        "ground": {
+            "start": 311,
+            "startMin": 12,
+            "startMax": 12,
+            "cd": 300,
+            "nb": 1,
+            "action": 304,
+            "recovery": 120
+        },
+        "air": {
+            "start": 311,
+            "startMin": 12,
+            "startMax": 12,
+            "cd": 300,
+            "nb": 1,
+            "action": 304,
+            "posY": 0,
+            "recovery": 120
+        }
+    },
+    "5b": {
+        "ground": {
+            "start": 301,
+            "startMin": 12,
+            "startMax": 12,
+            "cd": 300,
+            "nb": 1,
+            "action": 302,
+            "recovery": 120
+        },
+        "air": {
+            "start": 301,
+            "startMin": 12,
+            "startMax": 12,
+            "cd": 300,
+            "nb": 1,
+            "action": 302,
+            "posY": 0,
+            "recovery": 120
+        }
+    },
+    "2b": {
+        "ground": {
+            "start": 311,
+            "startMin": 12,
+            "startMax": 12,
+            "cd": 300,
+            "nb": 1,
+            "action": 302,
+            "recovery": 120
+        },
+        "air": {
+            "start": 311,
+            "startMin": 12,
+            "startMax": 12,
+            "cd": 300,
+            "nb": 1,
+            "action": 302,
+            "posY": 0,
+            "recovery": 120
+        }
+    },
+    "5c": {
+        "ground": {
+            "cd": 600,
+            "nb": 1,
+            "allowedKeys": [0, 0, 0, 0, 1, 0, 0, 0],
+            "action": 411,
+            "recovery": 300,
+            "offsetX": -50,
+            "reset": [
+                {
+                    "offset": "7D0",
+                    "value": 0,
+                    "size": 4
+                }
+            ]
+        },
+        "air": {
+            "cd": 600,
+            "nb": 1,
+            "allowedKeys": [0, 0, 0, 0, 1, 0, 0, 0],
+            "action": 411,
+            "recovery": 300,
+            "offsetX": -50,
+            "reset": [
+                {
+                    "offset": "7D0",
+                    "value": 0,
+                    "size": 4
+                }
+            ]
+        }
+    }
+}

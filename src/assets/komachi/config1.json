@@ -1,0 +1,55 @@
+{
+    "5a": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "speedX": 6,
+            "action": 305,
+            "offsetX": 20,
+            "recovery": 120
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "speedX": 6,
+            "action": 305,
+            "offsetX": 20,
+            "recovery": 120,
+            "posY": 0
+        }
+    },
+    "5b": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 304,
+            "speedY": 0,
+            "offsetX": -10,
+            "recovery": 150
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 307,
+            "offsetY": 50,
+            "recovery": 180
+        }
+    },
+    "5c": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 411,
+            "speedY": 0,
+            "recovery": 60
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 411,
+            "speedY": 0,
+            "recovery": 60,
+            "posY": 0
+        }
+    }
+}

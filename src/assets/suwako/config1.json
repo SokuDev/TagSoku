@@ -1,0 +1,224 @@
+{
+    "hasStance": true,
+    "5a0": {
+        "ground": {
+            "cd": 360,
+            "nb": 1,
+            "action": 301,
+            "recovery": 120,
+            "stance": 0
+        },
+        "air": {
+            "cd": 360,
+            "nb": 1,
+            "action": 301,
+            "posY": 0,
+            "recovery": 120,
+            "stance": 0
+        }
+    },
+    "5b0": {
+        "ground": {
+            "cd": 360,
+            "nb": 1,
+            "action": 331,
+            "offsetX": -15,
+            "recovery": 120,
+            "stance": 1
+        },
+        "air": {
+            "cd": 360,
+            "nb": 1,
+            "action": 331,
+            "offsetX": -15,
+            "posY": 0,
+            "recovery": 120,
+            "stance": 1
+        }
+    },
+    "5c0": {
+        "ground": {
+            "cd": 360,
+            "nb": 1,
+            "action": 411,
+            "recovery": 120,
+            "stance": 3
+        },
+        "air": {
+            "cd": 360,
+            "nb": 1,
+            "action": 411,
+            "posY": 0,
+            "recovery": 120,
+            "stance": 3
+        }
+    },
+
+    "5a1": {
+        "ground": {
+            "cd": 360,
+            "nb": 1,
+            "action": 304,
+            "recovery": 120,
+            "stance": 1
+        },
+        "air": {
+            "cd": 360,
+            "nb": 1,
+            "action": 304,
+            "posY": 0,
+            "recovery": 120,
+            "stance": 1
+        }
+    },
+    "5b1": {
+        "ground": {
+            "cd": 360,
+            "nb": 1,
+            "action": 403,
+            "recovery": 180,
+            "stance": 3
+        },
+        "air": {
+            "cd": 360,
+            "nb": 1,
+            "action": 403,
+            "posY": 0,
+            "recovery": 180,
+            "stance": 3
+        }
+    },
+    "5c1": {
+        "ground": {
+            "cd": 360,
+            "nb": 1,
+            "action": 332,
+            "recovery": 120,
+            "stance": 2
+        },
+        "air": {
+            "cd": 360,
+            "nb": 1,
+            "action": 332,
+            "posY": 0,
+            "recovery": 120,
+            "stance": 2
+        }
+    },
+
+    "5a2": {
+        "ground": {
+            "startup": 60,
+            "cd": 360,
+            "nb": 1,
+            "action": 305,
+            "recovery": 120,
+            "stance": 0
+        },
+        "air": {
+            "startup": 60,
+            "cd": 360,
+            "nb": 1,
+            "action": 305,
+            "posY": 0,
+            "recovery": 120,
+            "stance": 0
+        }
+    },
+    "5b2": {
+        "ground": {
+            "startup": 60,
+            "cd": 360,
+            "nb": 1,
+            "action": 408,
+            "recovery": 120,
+            "stance": 0
+        },
+        "air": {
+            "startup": 60,
+            "cd": 360,
+            "nb": 1,
+            "action": 408,
+            "posY": 0,
+            "recovery": 120,
+            "stance": 0
+        }
+    },
+    "5c2": {
+        "ground": {
+            "startup": 60,
+            "cd": 360,
+            "nb": 1,
+            "action": 418,
+            "recovery": 120,
+            "stance": 0
+        },
+        "air": {
+            "startup": 60,
+            "cd": 360,
+            "nb": 1,
+            "action": 418,
+            "posY": 0,
+            "recovery": 120,
+            "stance": 0
+        }
+    },
+
+    "5a3": {
+        "ground": {
+            "cd": 360,
+            "nb": 1,
+            "action": 309,
+            "speedY": 0,
+            "gravityY": 0,
+            "posY": 100,
+            "recovery": 120,
+            "stance": 0
+        },
+        "air": {
+            "cd": 360,
+            "nb": 1,
+            "speedY": 0,
+            "gravityY": 0,
+            "action": 309,
+            "recovery": 120,
+            "stance": 0
+        }
+    },
+    "5b3": {
+        "ground": {
+            "cd": 360,
+            "nb": 1,
+            "action": 405,
+            "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
+            "posY": 100,
+            "recovery": 120,
+            "stance": 3
+        },
+        "air": {
+            "cd": 360,
+            "nb": 1,
+            "action": 405,
+            "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
+            "recovery": 120,
+            "stance": 3
+        }
+    },
+    "5c3": {
+        "ground": {
+            "cd": 360,
+            "nb": 1,
+            "action": 416,
+            "posY": 100,
+            "recovery": 120,
+            "stance": 2
+        },
+        "air": {
+            "cd": 360,
+            "nb": 1,
+            "action": 416,
+            "recovery": 120,
+            "stance": 2
+        }
+    }
+}
