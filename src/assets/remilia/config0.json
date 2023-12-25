@@ -1,6 +1,6 @@
 {
-    "spells": [207],
-    "shownCost": 3,
+    "spells": [204],
+    "shownCost": 5,
     "5a": {
         "ground": {
             "cd": 240,
@@ -53,29 +53,29 @@
         "ground": {
             "cd": 450,
             "nb": 1,
-            "action": 560
+            "action": 530,
+            "posY": -100
         },
         "air": {
             "cd": 450,
             "nb": 1,
-            "action": 560,
+            "action": 530,
             "speedY": 0,
-            "gravityY": 0
+            "gravityY": 0,
+            "posY": -100
         }
     },
     "8b": {
         "ground": {
-            "cd": 900,
+            "cd": 450,
             "nb": 1,
-            "action": 525,
+            "action": 566,
             "offsetX": -50
         },
         "air": {
-            "cd": 900,
+            "cd": 450,
             "nb": 1,
-            "action": 527,
-            "speedY": 0,
-            "gravityY": 0,
+            "action": 566,
             "offsetX": -50
         }
     },
@@ -83,15 +83,19 @@
         "ground": {
             "cd": 600,
             "nb": 1,
-            "action": 541,
-            "offsetX": -50
+            "action": 546,
+            "offsetX": -50,
+            "recovery": 12,
+            "cond": "basic"
         },
         "air": {
             "cd": 600,
             "nb": 1,
-            "action": 541,
+            "action": 546,
             "posY": 0,
-            "offsetX": -50
+            "offsetX": -50,
+            "recovery": 12,
+            "cond": "basic"
         }
     },
 
@@ -99,24 +103,24 @@
         "ground": {
             "speedX": 0,
             "speedY": 0,
-            "offsetX": 50,
-            "cost": 3,
-            "cardName": 207,
+            "offsetX": -300,
+            "cost": 5,
+            "cardName": 204,
             "cd": 1200,
             "nb": 1,
-            "action": 607
+            "action": 604
         },
         "air": {
             "speedX": 0,
             "speedY": 0,
             "posY": 0,
             "gravityY": 0,
-            "offsetX": 50,
-            "cost": 3,
-            "cardName": 207,
+            "offsetX": -300,
+            "cost": 5,
+            "cardName": 204,
             "cd": 1200,
             "nb": 1,
-            "action": 607
+            "action": 604
         }
     }
 }

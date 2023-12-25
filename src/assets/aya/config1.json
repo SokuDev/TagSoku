@@ -8,8 +8,7 @@
             "cd": 240,
             "nb": 4,
             "action": 303,
-            "offsetX": -10,
-            "recovery": 120
+            "offsetX": -10
         },
         "air": {
             "start": 200,
@@ -20,8 +19,7 @@
             "nb": 4,
             "action": 303,
             "posY": 0,
-            "offsetX": -10,
-            "recovery": 120
+            "offsetX": -10
         }
     },
     "5b": {
@@ -35,8 +33,7 @@
             "action": 306,
             "speedY": 0,
             "posY": 100,
-            "offsetX": -50,
-            "recovery": 150
+            "offsetX": -50
         },
         "air": {
             "start": 202,
@@ -46,8 +43,7 @@
             "cd": 300,
             "nb": 1,
             "action": 309,
-            "speedY": 0,
-            "recovery": 150
+            "speedY": 0
         }
     },
     "5c": {
@@ -55,15 +51,13 @@
             "cd": 420,
             "nb": 1,
             "action": 411,
-            "speedY": 0,
-            "recovery": 120
+            "speedY": 0
         },
         "air": {
             "cd": 420,
             "nb": 1,
             "action": 411,
             "speedY": 0,
-            "recovery": 120,
             "posY": 0
         }
     }

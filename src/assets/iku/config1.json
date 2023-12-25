@@ -4,15 +4,13 @@
             "cd": 300,
             "nb": 1,
             "action": 303,
-            "offsetX": 20,
-            "recovery": 120
+            "offsetX": 20
         },
         "air": {
             "cd": 300,
             "nb": 1,
             "action": 303,
             "offsetX": 20,
-            "recovery": 120,
             "posY": 0
         }
     },
@@ -21,16 +19,14 @@
             "cd": 300,
             "nb": 1,
             "action": 408,
-            "offsetX": -50,
-            "recovery": 30
+            "offsetX": -50
         },
         "air": {
             "cd": 300,
             "nb": 1,
             "action": 408,
             "offsetX": -50,
-            "posY": 0,
-            "recovery": 30
+            "posY": 0
         }
     },
     "5c": {
@@ -39,14 +35,12 @@
             "nb": 1,
             "action": 418,
             "speedX": 13,
-            "offsetX": -150,
-            "recovery": 120
+            "offsetX": -150
         },
         "air": {
             "cd": 360,
             "nb": 1,
-            "action": 308,
-            "recovery": 180
+            "action": 308
         }
     }
 }

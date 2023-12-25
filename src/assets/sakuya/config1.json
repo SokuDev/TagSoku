@@ -4,8 +4,7 @@
             "cd": 300,
             "nb": 1,
             "action": 304,
-            "offsetX": -15,
-            "recovery": 120
+            "offsetX": -15
         },
         "air": {
             "cd": 300,
@@ -15,37 +14,20 @@
             "startMax": 20,
             "startKeys": [1, 0, 0, 0, 0, 0, 0, 0],
             "action": 307,
-            "offsetX": -15,
-            "recovery": 120
+            "offsetX": -15
         }
     },
     "5b": {
         "ground": {
             "cd": 360,
             "nb": 1,
-            "action": 402,
-            "recovery": 120,
-            "reset": [
-                {
-                    "offset": "7D0",
-                    "value": 0,
-                    "size": 8
-                }
-            ]
+            "action": 402
         },
         "air": {
             "cd": 360,
             "nb": 1,
             "action": 402,
-            "posY": 0,
-            "recovery": 120,
-            "reset": [
-                {
-                    "offset": "7D0",
-                    "value": 0,
-                    "size": 8
-                }
-            ]
+            "posY": 0
         }
     },
     "5c": {
@@ -53,45 +35,19 @@
             "cd": 420,
             "nb": 1,
             "action": 414,
-            "recovery": 120,
             "speedY": 0,
             "gravityY": 0,
             "offsetX": -20,
-            "posY": 100,
-            "reset": [
-                {
-                    "offset": "7D0",
-                    "value": 0,
-                    "size": 4
-                },
-                {
-                    "offset": "7DC",
-                    "value": 0,
-                    "size": 4
-                }
-            ]
+            "posY": 100
         },
         "air": {
             "cd": 420,
             "nb": 1,
             "action": 414,
-            "recovery": 120,
             "speedY": 0,
             "gravityY": 0,
             "offsetX": -20,
-            "offsetY": 20,
-            "reset": [
-                {
-                    "offset": "7D0",
-                    "value": 0,
-                    "size": 4
-                },
-                {
-                    "offset": "7DC",
-                    "value": 0,
-                    "size": 4
-                }
-            ]
+            "offsetY": 20
         }
     }
 }

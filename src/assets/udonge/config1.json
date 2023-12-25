@@ -6,15 +6,13 @@
             "action": 302,
             "hitCount": 3,
             "offsetX": -15,
-            "speedX": 15,
-            "recovery": 300
+            "speedX": 15
         },
         "air": {
             "cd": 360,
             "nb": 1,
             "action": 309,
-            "speedY": 0,
-            "recovery": 120
+            "speedY": 0
         }
     },
     "5b": {
@@ -22,31 +20,27 @@
             "cd": 300,
             "nb": 1,
             "speedX": 10,
-            "action": 305,
-            "recovery": 120
+            "action": 305
         },
         "air": {
             "cd": 300,
             "nb": 1,
             "posY": 0,
             "speedX": 10,
-            "action": 305,
-            "recovery": 120
+            "action": 305
         }
     },
     "5c": {
         "ground": {
             "cd": 360,
             "nb": 1,
-            "action": 412,
-            "recovery": 120
+            "action": 412
         },
         "air": {
             "cd": 360,
             "nb": 1,
             "action": 412,
-            "posY": 0,
-            "recovery": 120
+            "posY": 0
         }
     }
 }

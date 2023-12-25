@@ -1,5 +1,5 @@
 {
-    "spells": [206],
+    "spells": [212],
     "shownCost": 3,
     "5a": {
         "ground": {
@@ -99,44 +99,44 @@
 
     "8a": {
         "ground": {
-            "cd": 600,
+            "cd": 750,
             "nb": 1,
-            "action": 546,
-            "offsetX": -100,
-            "recovery": 120
+            "action": 565,
+            "offsetX": 200,
+            "startup": 15
         },
         "air": {
-            "cd": 600,
+            "cd": 750,
             "nb": 1,
-            "action": 546,
-            "offsetX": -100,
+            "action": 565,
+            "offsetX": 200,
             "posY": 0,
-            "recovery": 120
+            "startup": 15
         }
     },
     "8b": {
         "ground": {
             "cd": 600,
             "nb": 1,
-            "action": 560
+            "action": 520
         },
         "air": {
             "cd": 600,
             "nb": 1,
-            "action": 560,
+            "action": 520,
             "posY": 0
         }
     },
     "8c": {
         "ground": {
-            "cd": 900,
+            "cd": 450,
             "nb": 1,
-            "action": 525
+            "action": 500
         },
         "air": {
-            "cd": 900,
+            "cd": 450,
             "nb": 1,
-            "action": 525,
+            "action": 500,
             "posY": 0
         }
     },
@@ -145,23 +145,24 @@
         "ground": {
             "speedX": 0,
             "speedY": 0,
-            "offsetX": -50,
+            "offsetX": 0,
             "cost": 3,
-            "cardName": 206,
+            "cardName": 212,
             "cd": 1200,
             "nb": 1,
-            "action": 606
+            "action": 612
         },
         "air": {
             "speedX": 0,
             "speedY": 0,
             "gravityY": 0,
-            "offsetX": -50,
+            "offsetX": 0,
             "cost": 3,
-            "cardName": 206,
+            "cardName": 212,
             "cd": 1200,
             "nb": 1,
-            "action": 606
+            "action": 612,
+            "posY": 0
         }
     }
 }
