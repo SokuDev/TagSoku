@@ -60,6 +60,7 @@
             "nb": 1,
             "action": 551,
             "speedY": 0,
+            "posY": 0,
             "gravityY": 0
         }
     },

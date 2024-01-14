@@ -1,73 +1,69 @@
 {
-    "spells": [204],
-    "shownCost": 5,
+    "spells": [211],
+    "shownCost": 3,
     "5a": {
         "ground": {
             "cd": 300,
             "nb": 1,
-            "action": 304,
-            "offsetX": -15
+            "speedX": 6,
+            "action": 305,
+            "offsetX": 20
         },
         "air": {
             "cd": 300,
             "nb": 1,
-            "start": 202,
-            "startMin": 10,
-            "startMax": 20,
-            "startKeys": [1, 0, 0, 0, 0, 0, 0, 0],
-            "action": 307,
-            "offsetX": -15
+            "speedX": 6,
+            "action": 305,
+            "offsetX": 20,
+            "posY": 0
         }
     },
     "5b": {
         "ground": {
-            "cd": 360,
+            "cd": 300,
             "nb": 1,
-            "action": 402
+            "action": 304,
+            "speedY": 0,
+            "offsetX": -10
         },
         "air": {
-            "cd": 360,
+            "cd": 300,
             "nb": 1,
-            "action": 402,
-            "posY": 0
+            "action": 307,
+            "offsetY": 50
         }
     },
     "5c": {
         "ground": {
-            "cd": 420,
+            "cd": 300,
             "nb": 1,
-            "action": 414,
-            "speedY": 0,
-            "gravityY": 0,
-            "offsetX": -20,
-            "posY": 100
+            "action": 411,
+            "speedY": 0
         },
         "air": {
-            "cd": 420,
+            "cd": 300,
             "nb": 1,
-            "action": 414,
+            "action": 411,
             "speedY": 0,
-            "gravityY": 0,
-            "offsetX": -20,
-            "offsetY": 20
+            "posY": 0
         }
     },
 
 
     "8a": {
         "ground": {
-            "cd": 450,
+            "cd": 900,
             "nb": 1,
-            "action": 565,
-            "offsetX": 50,
+            "action": 546,
+            "offsetX": -50,
             "cond": "end"
         },
         "air": {
-            "cd": 450,
+            "cd": 900,
             "nb": 1,
-            "action": 565,
+            "action": 546,
             "posY": 0,
-            "offsetX": 50,
+            "offsetX": -50,
             "cond": "end"
         }
     },
@@ -75,14 +71,14 @@
         "ground": {
             "cd": 600,
             "nb": 1,
-            "action": 530,
+            "action": 500,
             "offsetX": -50,
             "cond": "end"
         },
         "air": {
             "cd": 600,
             "nb": 1,
-            "action": 530,
+            "action": 500,
             "posY": 0,
             "offsetX": -50,
             "cond": "end"
@@ -92,16 +88,16 @@
         "ground": {
             "cd": 600,
             "nb": 1,
-            "action": 550,
-            "offsetX": -150,
+            "action": 520,
+            "offsetX": -50,
             "cond": "end"
         },
         "air": {
             "cd": 600,
             "nb": 1,
-            "action": 550,
+            "action": 520,
             "posY": 0,
-            "offsetX": -150,
+            "offsetX": -50,
             "cond": "end"
         }
     },
@@ -111,11 +107,11 @@
             "speedX": 0,
             "speedY": 0,
             "offsetX": -50,
-            "cost": 5,
-            "cardName": 204,
+            "cost": 3,
+            "cardName": 211,
             "cd": 1200,
             "nb": 1,
-            "action": 604
+            "action": 611
         },
         "air": {
             "speedX": 0,
@@ -123,11 +119,11 @@
             "gravityY": 0,
             "offsetX": -50,
             "posY": 0,
-            "cost": 5,
-            "cardName": 204,
+            "cost": 3,
+            "cardName": 211,
             "cd": 1200,
             "nb": 1,
-            "action": 604
+            "action": 611
         }
     }
 }

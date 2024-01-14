@@ -326,6 +326,8 @@ static SokuLib::DrawUtils::RectangleShape rectangle;
 static bool spawned = false;
 static bool init = false;
 static bool disp = false;
+static bool disp2 = false;
+static bool disp3 = false;
 static bool anim = false;
 static bool assetsLoaded = false;
 static CInfoManager hud2;
@@ -839,8 +841,14 @@ void updateObject(SokuLib::CharacterManager *main, SokuLib::CharacterManager *mg
 		mgr->projectileInvulTimer = 2;
 		if (mgr->objectBase.action == SokuLib::ACTION_STANDING_UP)
 			reinterpret_cast<SokuLib::v2::AnimationObject *>(mgr)->setAction(SokuLib::ACTION_IDLE);
-		if (mgr->objectBase.action >= SokuLib::ACTION_FORWARD_DASH)
+		if (
+			mgr->objectBase.action >= SokuLib::ACTION_FORWARD_DASH &&
+			mgr->objectBase.action != SokuLib::ACTION_FLY &&
+			mgr->objectBase.action != SokuLib::ACTION_USING_SC_ID_214
+		) {
+			printf("%i\n", mgr->objectBase.action);
 			reinterpret_cast<SokuLib::v2::AnimationObject *>(mgr)->setAction(SokuLib::ACTION_IDLE);
+		}
 		if (SokuLib::mainMode == SokuLib::BATTLE_MODE_PRACTICE)
 			chr.cd = 0;
 		chr.cd -= !!chr.cd;
@@ -1237,6 +1245,10 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 		return (This->*s_originalBattleMgrOnProcess)();
 	if (SokuLib::checkKeyOneshot(DIK_F4, false, false, false))
 		disp = !disp;
+	if (SokuLib::checkKeyOneshot(DIK_F3, false, false, false))
+		disp2 = !disp2;
+	if (SokuLib::checkKeyOneshot(DIK_F2, false, false, false))
+		disp3 = !disp3;
 
 	int ret = (This->*s_originalBattleMgrOnProcess)();
 
@@ -1304,12 +1316,9 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 			highlightAnimation[i] %= 20;
 		}
 	for (int i = 2; i < 4; i++) {
-		auto &elems = loadedData[(&currentChr.first)[i - 2].chr][(&currentChr.first)[i - 2].loadoutIndex].elems;
-		auto it = elems.find("5s");
+		auto &elems = loadedData[(&currentChr.first)[i - 2].chr][(&currentChr.first)[i - 2].loadoutIndex];
 
-		if (it == elems.end())
-			continue;
-		if (dataMgr->players[i]->hand.size >= it->second.first->cost) {
+		if (dataMgr->players[i]->hand.size >= elems.shownCost) {
 			highlightAnimation[i]++;
 			highlightAnimation[i] %= 20;
 		}
@@ -1534,7 +1543,11 @@ int __fastcall CSelect_OnProcess(SokuLib::Select *This)
 		generateFakeDecks();
 	if (ret == SokuLib::SCENE_TITLE) {
 		assists.first.character = SokuLib::CHARACTER_CIRNO;
+		assists.first.palette = 0;
+		assists.first.deck = 0;
 		assists.second.character = SokuLib::CHARACTER_MARISA;
+		assists.second.palette = 0;
+		assists.second.deck = 0;
 		memset(loadouts, 1, sizeof(loadouts));
 	}
 	for (int i = 0; i < 2; i++) {
@@ -1803,7 +1816,26 @@ void __fastcall CBattleManager_OnRender(SokuLib::BattleManager *This)
 	bool show = hasRIV ? ((RivControl *)((char *)This + sizeof(*This)))->hitboxes : disp;
 
 	(This->*s_originalBattleMgrOnRender)();
-	if (init && This->matchState < 6) {
+	if (!init)
+		return;
+	if (disp3)
+		for (int j = -2; j < 3; j++) {
+			for (int i = 0; i < 4; i++) {
+				if (j == 0) {
+					if (i >= 2 && disp2) {
+						float rot = dataMgr->players[i]->objectBase.renderInfos.yRotation;
+
+						dataMgr->players[i]->objectBase.renderInfos.yRotation = 0;
+						(dataMgr->players[i]->*SokuLib::union_cast<void (SokuLib::CharacterManager::*)()>(0x438d20))();
+						dataMgr->players[i]->objectBase.renderInfos.yRotation = rot;
+					} else
+						(dataMgr->players[i]->*SokuLib::union_cast<void (SokuLib::CharacterManager::*)()>(0x438d20))();
+				}
+				(dataMgr->players[i]->objects.*SokuLib::union_cast<void (SokuLib::ObjListManager::*)(int)>(0x59be00))(j);
+			}
+		}
+	setRenderMode(1);
+	if (This->matchState < 6) {
 		displayAssistGage(currentChr.first,  LEFT_ASSIST_BOX_X,  LEFT_BAR,  LEFT_CROSS,  false);
 		displayAssistGage(currentChr.second, RIGHT_ASSIST_BOX_X, RIGHT_BAR, RIGHT_CROSS, true);
 		if (show && SokuLib::mainMode != SokuLib::BATTLE_MODE_VSSERVER && SokuLib::mainMode != SokuLib::BATTLE_MODE_VSCLIENT) {
@@ -2331,10 +2363,11 @@ void restoreHudRender(CInfoManager *hud, UnderObjects *p1)
 
 #define sidedSetPos(side, t, xpos, ypos) (t).setPosition({(side) ? 640 - (xpos) - (int)(t).getSize().x : (xpos), ypos})
 
-void displayCard(SokuLib::CharacterManager *mgr, unsigned shown, bool side)
+void displayCard(SokuLib::CharacterManager *mgr, unsigned shown, bool side, unsigned cardId)
 {
+	shown -= SokuLib::activeWeather == SokuLib::WEATHER_CLOUDY && mgr->swordOfRaptureDebuffTimeLeft == 0;
 	for (int j = 0; j < 5; j++) {
-		sidedSetPos(side, cardHolder, 20 + j * 23, 110);
+		sidedSetPos(side, cardHolder, 50 + j * 23, 110);
 		cardHolder.draw();
 	}
 	if (*(SokuLib::Weather *)&mgr->offset_0x52A[2] != SokuLib::WEATHER_MOUNTAIN_VAPOR) {
@@ -2347,7 +2380,8 @@ void displayCard(SokuLib::CharacterManager *mgr, unsigned shown, bool side)
 			auto &texture = cardsTextures[chr][id];
 
 			texture.setSize({17, 27});
-			sidedSetPos(side, texture, 22 + j * 23, 112);
+			texture.setRotation(0);
+			sidedSetPos(side, texture, 52 + j * 23, 112);
 			texture.tint = SokuLib::Color::White;
 			texture.draw();
 			j++;
@@ -2356,21 +2390,37 @@ void displayCard(SokuLib::CharacterManager *mgr, unsigned shown, bool side)
 			meterIndicator.rect.height = meterIndicator.texture.getSize().y * ratio;
 			meterIndicator.rect.top = meterIndicator.texture.getSize().y - meterIndicator.rect.height;
 			meterIndicator.setSize({17, static_cast<unsigned int>(27 * ratio)});
-			sidedSetPos(side, meterIndicator, 22 + j * 23, static_cast<int>(112 + 27 - meterIndicator.getSize().y));
+			sidedSetPos(side, meterIndicator, 52 + j * 23, static_cast<int>(112 + 27 - meterIndicator.getSize().y));
 			meterIndicator.draw();
 		}
 		if (shown <= mgr->hand.size) {
 			setRenderMode(2);
 			for (int j = 0; j < shown; j++) {
-				sidedSetPos(side, highlight[highlightAnimation[2]], 15 + j * 23, 93);
+				sidedSetPos(side, highlight[highlightAnimation[2]], 45 + j * 23, 93);
 				highlight[highlightAnimation[2]].draw();
 			}
 			setRenderMode(1);
 		}
 	} else for (int j = 0; j < 5; j++) {
-		sidedSetPos(side, cardHiddenSmall, 22 + j * 23, 112);
+		sidedSetPos(side, cardHiddenSmall, 52 + j * 23, 112);
 		cardHiddenSmall.draw();
 	}
+
+	auto chr = cardId < 100 ? SokuLib::CHARACTER_RANDOM : mgr->offset_0x34B[1];
+	auto &texture = cardsTextures[chr][cardId];
+
+	texture.setSize({20, 30});
+	texture.setRotation(M_PI / 6 * (side ? 1 : -1));
+	sidedSetPos(side, texture, 55 + 5 * 23, 110);
+	texture.setPosition({
+		texture.getPosition().x + (side ? 1 : 2),
+		texture.getPosition().y + (side ? 2 : 1)
+	});
+	texture.tint = SokuLib::Color::Black;
+	texture.draw();
+	sidedSetPos(side, texture, 55 + 5 * 23, 110);
+	texture.tint = SokuLib::Color::White;
+	texture.draw();
 }
 
 int __fastcall onHudRender(CInfoManager *This)
@@ -2455,8 +2505,11 @@ int __fastcall onHudRender(CInfoManager *This)
 		setRenderMode(1);
 	}
 
-	displayCard(dataMgr->players[2], loadedData[currentChr.first.chr][currentChr.first.loadoutIndex].shownCost, false);
-	displayCard(dataMgr->players[3], loadedData[currentChr.second.chr][currentChr.second.loadoutIndex].shownCost, true);
+	auto &leftData = loadedData[currentChr.first.chr][currentChr.first.loadoutIndex];
+	auto &rightData = loadedData[currentChr.second.chr][currentChr.second.loadoutIndex];
+
+	displayCard(dataMgr->players[2], leftData.shownCost, false, leftData.spells.front());
+	displayCard(dataMgr->players[3], rightData.shownCost, true, rightData.spells.front());
 	return i;
 }
 
@@ -2623,8 +2676,8 @@ SokuLib::Select *__fastcall CSelect_construct(SokuLib::Select *This)
 		dat.cursor->x1 = 700 * i - 50;
 		dat.isInit = true;
 		((void (__thiscall *)(CEffectManager  *))0x422CF0)(&dat.effectMgr);
-		profileInfo.palette = 0;
-		profileInfo.deck = 0;
+		dat.palHandler.pos = profileInfo.palette;
+		dat.deckHandler.pos = profileInfo.deck;
 		// data/scene/select/character/09b_character/character_%02d.bmp
 		sprintf(buffer, (char *)0x85785C, profileInfo.character);
 		if (!SokuLib::textureMgr.loadTexture(&ret, buffer, &size.x, &size.y))
@@ -4392,8 +4445,8 @@ bool initStartingKeys(SokuLib::CharacterManager * const assist)
 			assist->keyMap.d = 0;
 
 		assist->keyMap.a = 0;
-		assist->keyMap.b = assist->keyManager->keymapManager->input.b && assist->keyMap.b ? assist->keyMap.b + 1 : 0;
-		assist->keyMap.c = assist->keyManager->keymapManager->input.c && assist->keyMap.c ? assist->keyMap.c + 1 : 0;
+		assist->keyMap.b = 0;
+		assist->keyMap.c = 0;
 		assist->keyMap.pause = 0;
 		assist->keyMap.select = 0;
 		assist->keyMap.spellcard = 0;
@@ -4413,14 +4466,14 @@ bool initStartingKeys(SokuLib::CharacterManager * const assist)
 			else
 				old++;
 		}
-	} else if (chr.started && chr.cond(assist, chr) && chr.ended && chr.nb == 0) {
+	} else if (chr.started && chr.ended && chr.nb == 0) {
 		switch (chr.currentStance) {
 		default:
 			assist->keyMap.horizontalAxis = 0;
 			assist->keyMap.verticalAxis = 0;
 			assist->keyMap.a = 0;
-			assist->keyMap.b = assist->keyManager->keymapManager->input.b && assist->keyMap.b ? assist->keyMap.b + 1 : 0;
-			assist->keyMap.c = assist->keyManager->keymapManager->input.c && assist->keyMap.c ? assist->keyMap.c + 1 : 0;
+			assist->keyMap.b = 0;
+			assist->keyMap.c = 0;
 			assist->keyMap.d = 0;
 			assist->keyMap.pause = 0;
 			assist->keyMap.select = 0;
@@ -4433,8 +4486,8 @@ bool initStartingKeys(SokuLib::CharacterManager * const assist)
 			assist->keyMap.horizontalAxis = 0;
 			assist->keyMap.a = 0;
 			assist->keyMap.b = 0;
-			assist->keyMap.b = assist->keyManager->keymapManager->input.b && assist->keyMap.b ? assist->keyMap.b + 1 : 0;
-			assist->keyMap.c = assist->keyManager->keymapManager->input.c && assist->keyMap.c ? assist->keyMap.c + 1 : 0;
+			assist->keyMap.b = 0;
+			assist->keyMap.c = 0;
 			assist->keyMap.pause = 0;
 			assist->keyMap.select = 0;
 			assist->keyMap.spellcard = 0;
@@ -4451,8 +4504,8 @@ bool initStartingKeys(SokuLib::CharacterManager * const assist)
 			}
 			assist->keyMap.horizontalAxis = 0;
 			assist->keyMap.a = 0;
-			assist->keyMap.b = assist->keyManager->keymapManager->input.b && assist->keyMap.b ? assist->keyMap.b + 1 : 0;
-			assist->keyMap.c = assist->keyManager->keymapManager->input.c && assist->keyMap.c ? assist->keyMap.c + 1 : 0;
+			assist->keyMap.b = 0;
+			assist->keyMap.c = 0;
 			assist->keyMap.pause = 0;
 			assist->keyMap.select = 0;
 			assist->keyMap.spellcard = 0;
@@ -4504,8 +4557,8 @@ bool initStartingKeys(SokuLib::CharacterManager * const assist)
 		int actual = ((int *)&assist->keyManager->keymapManager->input)[i];
 		int &held = ((int *)&chr.releasedKeys)[i];
 
-		if (i == 6)
-			continue;
+		if (i >= 6)
+			break;
 		if (actual && held)
 			old++;
 		else if ((i != 3 && i != 4) || !old || ((int *)&assist->keyManager->keymapManager->input)[i] == 0) {
