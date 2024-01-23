@@ -209,16 +209,16 @@ struct CEffectManager {
 struct ExtraChrSelectData {
 	SokuLib::CDesign::Object *name;
 	SokuLib::CDesign::Object *portrait;
+	SokuLib::CDesign::Object *name2;
+	SokuLib::CDesign::Object *portrait2;
 	SokuLib::CDesign::Object *spellCircle;
 	SokuLib::CDesign::Object *charObject;
 	SokuLib::CDesign::Object *deckObject;
-	SokuLib::CDesign::Sprite *profileBack;
 	SokuLib::CDesign::Object *gear;
 	SokuLib::CDesign::Sprite *cursor;
 	SokuLib::CDesign::Sprite *deckSelect;
 	SokuLib::CDesign::Sprite *colorSelect;
 	SokuLib::v2::AnimationObject *object;
-	SokuLib::KeymapManager *input;
 	SokuLib::InputHandler chrHandler;
 	SokuLib::InputHandler palHandler;
 	SokuLib::InputHandler deckHandler;
@@ -226,14 +226,15 @@ struct ExtraChrSelectData {
 	SokuLib::Sprite circleSprite;
 	SokuLib::Sprite gearSprite;
 	CEffectManager effectMgr;
+	int baseNameY = 0;
 	int portraitTexture = 0;
 	int circleTexture = 0;
 	int charNameCounter;
 	int portraitCounter;
+	int portraitCounter2;
 	int cursorCounter;
 	int deckIndCounter;
 	int chrCounter;
-	char selectState;
 	bool needInit;
 	bool isInit = false;
 };
@@ -311,14 +312,6 @@ struct ChrData {
 };
 
 //static SokuLib::CharacterManager *obj[0xC] = {nullptr};
-static char extraProfiles[0x7EC + 0x7EC];
-static SokuLib::Profile *profiles[4] = {
-	&SokuLib::profile1,
-	&SokuLib::profile2,
-	(SokuLib::Profile *)&extraProfiles[0],
-	(SokuLib::Profile *)&extraProfiles[0x7EC],
-};
-static SokuLib::CDesign::Sprite *profileHandlers[2];
 static char modFolder[1024];
 static char nameBuffer[64];
 static char soku2Dir[MAX_PATH];
@@ -335,7 +328,6 @@ static CInfoManager *&hud1 = *(CInfoManager **)0x8985E8;
 static bool hudInit = false;
 static UnderObjects hudElems[4];
 static ExtraChrSelectData chrSelectExtra[2];
-static SokuLib::KeymapManager *chrSelectExtraInputs[2] = {nullptr, nullptr};
 static SokuLib::Character lastChrs[4];
 static bool generated = false;
 static int selectedDecks[2] = {0, 0};
@@ -377,7 +369,7 @@ static bool saveError = false;
 static bool escPressed = false;
 static bool forceCardCost = false;
 static std::string lastLoadedProfile;
-static std::string loadedProfiles[4];
+static std::string loadedProfiles_[2];
 static std::pair<ChrInfo, ChrInfo> currentChr;
 static std::vector<std::array<ChrData, 3>> loadedData{22};
 static SokuLib::DrawUtils::Sprite gagesEffects[3];
@@ -445,11 +437,9 @@ static std::map<unsigned char, unsigned> nbSkills{
 	{ SokuLib::CHARACTER_SUWAKO, 12 }
 };
 
-static std::pair<SokuLib::KeymapManager, SokuLib::KeymapManager> keymaps;
-static std::pair<SokuLib::KeyManager, SokuLib::KeyManager> keys{{&keymaps.first}, {&keymaps.second}};
 static std::pair<SokuLib::PlayerInfo, SokuLib::PlayerInfo> assists = {
-	SokuLib::PlayerInfo{SokuLib::CHARACTER_CIRNO, 0, 0, 0, 0, {}, &keys.first},
-	SokuLib::PlayerInfo{SokuLib::CHARACTER_MARISA, 1, 0, 0, 0, {}, &keys.second}
+	SokuLib::PlayerInfo{SokuLib::CHARACTER_CIRNO, 0, 0, 0, 0, {}, nullptr},
+	SokuLib::PlayerInfo{SokuLib::CHARACTER_MARISA, 1, 0, 0, 0, {}, nullptr}
 };
 static std::map<unsigned, std::array<std::array<unsigned, 4>, 3>> loadedLoadouts;
 
@@ -1186,30 +1176,25 @@ void assisterAttacks(SokuLib::CharacterManager *main, SokuLib::CharacterManager 
 		return;
 	if (main->objectBase.action >= SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN && main->objectBase.action <= SokuLib::ACTION_NEUTRAL_TECH)
 		return;
+	if (!main->keyManager)
+		return;
+	if (main->keyManager->keymapManager->input.select != 1)
+		return;
 
-	auto inputs = &obj->keyManager->keymapManager->input;
-	auto button = &inputs->a;
 	std::string buttons[] = {"a", "b", "c", "d", "s"};
 	auto elems = &data.elems;
 
 	if (data.hasStance)
 		for (auto &buttonName : buttons)
 			buttonName += std::to_string(chr.currentStance);
-	for (int i = 0; i < 5; i++) {
-		if (*button == 1 && inputs->horizontalAxis < 0 && elems->find("4" + buttons[i]) != elems->end() && initAttack(main, obj, chr, (*elems)["4" + buttons[i]]))
-			return;
-		if (*button == 1 && inputs->horizontalAxis > 0 && elems->find("6" + buttons[i]) != elems->end() && initAttack(main, obj, chr, (*elems)["6" + buttons[i]]))
-			return;
-		if (*button == 1 && inputs->verticalAxis > 0 && elems->find("2" + buttons[i]) != elems->end() && initAttack(main, obj, chr, (*elems)["2" + buttons[i]]))
-			return;
-		if (*button == 1 && inputs->verticalAxis < 0 && elems->find("8" + buttons[i]) != elems->end() && initAttack(main, obj, chr, (*elems)["8" + buttons[i]]))
-			return;
-		if (*button == 1 && elems->find("5" + buttons[i]) != elems->end() && initAttack(main, obj, chr, (*elems)["5" + buttons[i]]))
-			return;
-		button++;
-		if (i == 3)
-			button++;
-	}
+	if (main->keyManager->keymapManager->input.verticalAxis < 0 && elems->find("5" + buttons[4]) != elems->end() && initAttack(main, obj, chr, (*elems)["5" + buttons[4]]))
+		return;
+	if (main->keyManager->keymapManager->input.verticalAxis > 0  && elems->find("8" + buttons[1]) != elems->end() && initAttack(main, obj, chr, (*elems)["8" + buttons[1]]))
+		return;
+	if (main->keyManager->keymapManager->input.horizontalAxis * main->objectBase.direction < 0 && elems->find("8" + buttons[0]) != elems->end() && initAttack(main, obj, chr, (*elems)["8" + buttons[0]]))
+		return;
+	if (main->keyManager->keymapManager->input.horizontalAxis * main->objectBase.direction > 0 && elems->find("8" + buttons[2]) != elems->end() && initAttack(main, obj, chr, (*elems)["8" + buttons[2]]))
+		return;
 }
 
 int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
@@ -1277,11 +1262,18 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 
 	for (int i = 0; i < 2; i++) {
 		auto &info = (&currentChr.first)[i];
+		auto keys = dataMgr->players[i]->keyManager;
 
 		if (dataMgr->players[i]->objectBase.hp == 0 && This->matchState <= 2) {
 			SokuLib::playSEWaveBuffer(44);
 			goto swap;
-		} else if (dataMgr->players[i]->keyManager->keymapManager->input.select == 1 && info.cd == 0) {
+		} else if (
+			keys &&
+			keys->keymapManager->input.select == 1 &&
+			keys->keymapManager->input.verticalAxis == 0 &&
+			keys->keymapManager->input.horizontalAxis == 0 &&
+			info.cd == 0
+		) {
 		swap:
 			auto arr = *(SokuLib::CharacterManager ***)(*(int *)SokuLib::ADDR_GAME_DATA_MANAGER + 0x40);
 			auto old = dataMgr->players[i + 2];
@@ -1493,14 +1485,12 @@ int __fastcall CSelect_OnProcess(SokuLib::Select *This)
 
 	if (
 		(This->leftKeys && This->leftKeys->input.spellcard == 1) ||
-		(This->rightKeys && This->rightKeys->input.spellcard == 1) ||
-		(chrSelectExtra[0].input && chrSelectExtra[0].input->input.spellcard == 1) ||
-		(chrSelectExtra[1].input && chrSelectExtra[1].input->input.spellcard == 1)
+		(This->rightKeys && This->rightKeys->input.spellcard == 1)
 	) {
 		displayCards = !displayCards;
 		SokuLib::playSEWaveBuffer(0x27);
 	}
-	if (This->leftSelectionStage == 4 && This->rightSelectionStage == 4 && chrSelectExtra[0].selectState == 4 && chrSelectExtra[1].selectState == 4) {
+	if (This->leftSelectionStage == 7 && This->rightSelectionStage == 7) {
 		if (counter < 60)
 			counter++;
 	} else {
@@ -1529,7 +1519,7 @@ int __fastcall CSelect_OnProcess(SokuLib::Select *This)
 		}
 	}
 
-	if (This->leftSelectionStage != 4 || This->rightSelectionStage != 4 || chrSelectExtra[0].selectState != 4 || chrSelectExtra[1].selectState != 4 || counter < 30) {
+	if (This->leftSelectionStage != 7 || This->rightSelectionStage != 7 || counter < 30) {
 		if (lastChrs[0] != SokuLib::leftChar)
 			selectedDecks[0] = 0;
 		lastChrs[0] = SokuLib::leftChar;
@@ -1552,10 +1542,20 @@ int __fastcall CSelect_OnProcess(SokuLib::Select *This)
 	}
 	for (int i = 0; i < 2; i++) {
 		auto &dat = chrSelectExtra[i];
+		auto &stage = (&This->leftSelectionStage)[i];
 		float offset;
 		auto &info = (&assists.first)[i];
 
-		if (info.character != SokuLib::CHARACTER_RANDOM) {
+		if (stage >= 4) {
+			if (dat.portraitCounter2)
+				dat.portraitCounter2--;
+		} else {
+			if (dat.portraitCounter2 < 15)
+				dat.portraitCounter2++;
+		}
+		dat.portrait2->x2 = -200 + 200 * (dat.portraitCounter2 * dat.portraitCounter2) / (15.f * 15.f);
+		dat.name2->y2 = dat.baseNameY + (-30 - i * 10) + (30 + i * 10) * (dat.portraitCounter2 * dat.portraitCounter2) / (15.f * 15.f);
+		if (info.character != SokuLib::CHARACTER_RANDOM && stage >= 4) {
 			if (dat.portraitCounter)
 				dat.portraitCounter--;
 		} else {
@@ -1564,21 +1564,33 @@ int __fastcall CSelect_OnProcess(SokuLib::Select *This)
 		}
 		if (dat.cursorCounter)
 			dat.cursorCounter--;
-		if (dat.charNameCounter)
-			dat.charNameCounter--;
+		if (stage >= 4) {
+			if (dat.charNameCounter)
+				dat.charNameCounter--;
+		} else {
+			if (dat.charNameCounter < 15)
+				dat.charNameCounter++;
+		}
 
-		if (dat.cursorCounter <= 0)
-			dat.cursor->x1 = This->charPortraitStartX + This->charPortraitSliceWidth * dat.chrHandler.pos;
-		else
-			dat.cursor->x1 -= (dat.cursor->x1 - (This->charPortraitStartX + This->charPortraitSliceWidth * dat.chrHandler.pos)) / 6;
-		if (dat.selectState == 0 || dat.selectState >= 3) {
+		if (stage >= 4) {
+			if (dat.cursorCounter <= 0)
+				dat.cursor->x1 = This->charPortraitStartX + This->charPortraitSliceWidth * dat.chrHandler.pos;
+			else
+				dat.cursor->x1 -= (dat.cursor->x1 - (This->charPortraitStartX + This->charPortraitSliceWidth * dat.chrHandler.pos)) / 6;
+		} else {
+			if (dat.cursorCounter <= 0)
+				dat.cursor->x1 = 700 * i - 50;
+			else
+				dat.cursor->x1 -= (dat.cursor->x1 - (700 * i - 50)) / 6;
+		}
+		if (stage <= 4 || stage >= 7) {
 			if (dat.deckIndCounter)
 				dat.deckIndCounter--;
 		} else {
 			if (dat.deckIndCounter < 15)
 				dat.deckIndCounter++;
 		}
-		if (dat.selectState == 0) {
+		if (stage <= 4) {
 			if (dat.chrCounter < 15)
 				dat.chrCounter++;
 		} else {
@@ -1753,18 +1765,18 @@ int __fastcall CSelect_OnRender(SokuLib::Select *This)
 		renderDeck(SokuLib::leftChar, selectedDecks[0], loadedDecks[0][SokuLib::leftChar], {28, 98});
 	if (This->rightSelectionStage == 1)
 		renderDeck(SokuLib::rightChar, selectedDecks[1], loadedDecks[1][SokuLib::rightChar], {28, 384});
-	if (chrSelectExtra[0].selectState == 1)
+	if (This->leftSelectionStage == 5)
 		renderDeck(assists.first.character, chrSelectExtra[0].deckHandler.pos, loadedDecks[2][assists.first.character], {178, 98});
-	if (chrSelectExtra[1].selectState == 1)
+	if (This->rightSelectionStage == 5)
 		renderDeck(assists.second.character, chrSelectExtra[1].deckHandler.pos, loadedDecks[3][assists.second.character], {178, 384});
 
 	if (This->leftSelectionStage == 3)
 		renderLoadout(SokuLib::leftChar, loadoutHandler[0].pos, {45, 28});
 	if (This->rightSelectionStage == 3)
 		renderLoadout(SokuLib::rightChar, loadoutHandler[1].pos, {45, 314});
-	if (chrSelectExtra[0].selectState == 3)
+	if (This->leftSelectionStage == 6)
 		renderLoadout(assists.first.character, loadoutHandler[2].pos, {195, 28});
-	if (chrSelectExtra[1].selectState == 3)
+	if (This->rightSelectionStage == 6)
 		renderLoadout(assists.second.character, loadoutHandler[3].pos, {195, 314});
 	return ret;
 }
@@ -2177,6 +2189,9 @@ void __stdcall loadDeckData(char *charName, void *csvFile, SokuLib::DeckInfo &de
 
 		SokuLib::CharacterManager** players = (SokuLib::CharacterManager**)((int)&SokuLib::getBattleMgr() + 0xC);
 
+		assists.first.keyManager = SokuLib::leftPlayerInfo.keyManager;
+		assists.second.keyManager = SokuLib::rightPlayerInfo.keyManager;
+
 		puts("Not spawned. Loading both assisters");
 		puts("Loading character 1");
 		((void (__thiscall *)(GameDataManager*, int, SokuLib::PlayerInfo &))0x46da40)(dataMgr, 2, assists.first);
@@ -2257,24 +2272,6 @@ void __fastcall handlePlayerInputs(SokuLib::CharacterManager *This)
 		og_handleInputs(dataMgr->players[2]);
 	if (dataMgr->players[3])
 		og_handleInputs(dataMgr->players[3]);
-}
-
-void loadExtraPlayerInputs(int a, int b, int c, int d)
-{
-	og_FUN4098D6(a, b, c, d);
-	if (SokuLib::mainMode != SokuLib::BATTLE_MODE_VSPLAYER)
-		return;
-
-	auto key = &keymaps.first;
-
-	for (int i = 0; i < 2; i++) {
-		key->vtable = (void *)0x85844C;
-		key->bindings.index = getInputManagerIndex(i + 2);
-		if (key->bindings.index < 0)
-			key->bindings.index = 0xFF;
-		memcpy(&key->bindings.up, &((key->bindings.index & 0x80) ? profiles[2 + i]->keyboardBindings : profiles[2 + i]->controllerBindings).up, sizeof(key->bindings) - 4);
-		key++;
-	}
 }
 
 void __fastcall onDeath(SokuLib::CharacterManager *This)
@@ -2429,25 +2426,16 @@ int __fastcall onHudRender(CInfoManager *This)
 
 	::VirtualProtect((PVOID)TEXT_SECTION_OFFSET, TEXT_SECTION_SIZE, PAGE_EXECUTE_WRITECOPY, &old);
 	if (SokuLib::getBattleMgr().matchState <= 5) {
-		*(char *)0x47D93F = 2;
-		*(char *)0x47D978 = 2;
-		*(char *)0x47D9A0 = 2;
-		*(const double **)0x47D9B0 = &yPos;
-		*(char *)0x47DADC = 3;
-		*(char *)0x47DB15 = 3;
-		*(char *)0x47DB4B = 3;
-		*(const double **)0x47DB57 = &yPos;
+		// JMP 0047DB95
+		*(char *)0x47D857 = 0xE9;
+		*(unsigned *)0x47D858 = 0x339;
 		initHudRender(&hud2, &hudElems[2]);
 		ogHudRender(&hud2);
 		restoreHudRender(&hud2, &hudElems[2]);
-		*(char *)0x47D93F = 0;
-		*(char *)0x47D978 = 0;
-		*(char *)0x47D9A0 = 0;
-		*(double **)0x47D9B0 = (double *)0x858EB8;
-		*(char *)0x47DADC = 1;
-		*(char *)0x47DB15 = 1;
-		*(char *)0x47DB4B = 1;
-		*(double **)0x47DB57 = (double *)0x858EB8;
+		// JNE 0047D9EE
+		*(char *)0x47D857 = 0x0F;
+		*(char *)0x47D858 = 0x85;
+		*(unsigned *)0x47D859 = 0x119;
 	}
 
 	initHudRender(This, &hudElems[0]);
@@ -2632,32 +2620,30 @@ SokuLib::Select *__fastcall CSelect_construct(SokuLib::Select *This)
 			SokuLib::textureMgr.deallocate(dat.portraitTexture);
 			SokuLib::textureMgr.deallocate(dat.circleTexture);
 		}
+		This->designBase3.getById(&dat.name2,       100 + i);
 		This->designBase3.getById(&dat.name,        100 + i + 2);
+		This->designBase3.getById(&dat.portrait2,   900 + i);
 		This->designBase3.getById(&dat.portrait,    900 + i + 2);
 		This->designBase3.getById(&dat.spellCircle, 800 + i + 2);
 		This->designBase3.getById(&dat.charObject,  700 + i + 2);
 		This->designBase3.getById(&dat.deckObject,  720 + i + 2);
-		This->designBase3.getById(&dat.profileBack, 300 + i + 2);
 		This->designBase3.getById(&dat.gear,        600 + i + 2);
 		This->designBase3.getById(&dat.cursor,      400 + i + 2);
 		This->designBase3.getById(&dat.deckSelect,  320 + i + 2);
 		This->designBase3.getById(&dat.colorSelect, 310 + i + 2);
+		dat.baseNameY = dat.name2->y2;
 		dat.cursor->active = true;
-		dat.gear->active = true;
-		dat.profileBack->active = true;
 		dat.deckSelect->active = true;
 		dat.colorSelect->active = true;
 		// data/scene/select/character/06b_wheel%dp.bmp
-		sprintf(buffer, (char *)0x857C18, i + 3);
+		sprintf(buffer, (char *)0x857C18, i + 1);
 		if (!SokuLib::textureMgr.loadTexture(&ret, buffer, &size.x, &size.y))
 			printf("Failed to load %s\n", buffer);
 		dat.gearSprite.setTexture(ret, 0, 0, size.x, size.y, size.x / 2, size.y / 2);
 		ret = 0;
 
 		dat.needInit = true;
-		dat.input = nullptr;
 		dat.object = nullptr;
-		dat.selectState = 0;
 		dat.chrHandler.maxValue = 20;
 		dat.chrHandler.pos = 0;
 		while ((*(unsigned **)&This->offset_0x018[0x84])[dat.chrHandler.pos] != profileInfo.character)
@@ -2670,6 +2656,7 @@ SokuLib::Select *__fastcall CSelect_construct(SokuLib::Select *This)
 		dat.deckHandler.pos = 0;
 		dat.deckHandler.posCopy = 0;
 		dat.portraitCounter = 15;
+		dat.portraitCounter2 = 15;
 		dat.charNameCounter = 15;
 		dat.chrCounter = 15;
 		dat.cursorCounter = 60;
@@ -2706,213 +2693,6 @@ SokuLib::Select *__fastcall CSelect_construct(SokuLib::Select *This)
 		}
 	}
 	return This;
-}
-
-void __declspec(naked) checkUsedInputs()
-{
-	__asm {
-		MOV EAX, 0
-	loop1:
-		CMP EAX, ESI
-		JE loopEnd
-		JG normal
-		MOV byte ptr [ESP + 0xC], 0x1
-		JMP loop0
-	normal:
-		MOV byte ptr [ESP + 0xC], 0x0
-	loop0:
-
-		MOV CL, [EAX + 0x898678]
-		CMP CL, [ESI + 0x898678]
-		JNE loopEnd
-
-		CMP byte ptr [ESP + 0xC], 0x0
-		JE resetOther
-
-		MOV byte ptr [ESI + 0x898678], 0xFE
-		RET
-
-	resetOther:
-		MOV byte ptr [EAX + 0x898678], 0xFE
-		CMP EAX, 2
-		JGE extraData
-
-		MOV [0x898680 + EAX * 4], 0
-		JMP loopEnd
-
-	extraData:
-		DEC EAX
-		DEC EAX
-		MOV [chrSelectExtraInputs + EAX * 4], 0
-		INC EAX
-		INC EAX
-
-	loopEnd:
-		INC EAX
-		CMP EAX, 4
-		JL loop1
-		RET
-	}
-}
-
-void __declspec(naked) setInputPointer()
-{
-	__asm {
-		CMP ESI, 2
-		JGE extraData
-
-		MOV [0x898680 + ESI * 4], EAX
-		RET
-
-	extraData:
-		DEC ESI
-		DEC ESI
-		MOV [chrSelectExtraInputs + ESI * 4], EAX
-		RET
-	}
-}
-
-void __declspec(naked) cmpInputPointer()
-{
-	__asm {
-		CMP ESI, 2
-		JGE extraData
-
-		CMP [0x898680 + ESI * 4], 0
-		RET
-
-	extraData:
-		PUSH ESI
-		DEC ESI
-		DEC ESI
-		CMP [chrSelectExtraInputs + ESI * 4], 0
-		POP ESI
-		RET
-	}
-}
-
-void __declspec(naked) loadInputPointer()
-{
-	__asm {
-		CMP EAX, 2
-		JGE extraData
-
-		MOV EAX, [0x898680 + EAX * 4]
-		RET
-
-	extraData:
-		DEC EAX
-		DEC EAX
-		MOV EAX, [chrSelectExtraInputs + EAX * 4]
-		RET
-	}
-}
-
-void __fastcall initExtraInputsLight(SokuLib::Select *This, int b)
-{
-	auto keyboard = (SokuLib::KeymapManager *)0x8986A8;
-
-	for (int i = 2 + b; i; i--) {
-		if ((getInputManagerIndex(i - 1) & 0xFE) == 0xFE) {
-			if (chrSelectExtra[b].selectState == 0) {
-				if (i == 3)
-					chrSelectExtra[0].input = keyboard;
-				else if (i != 3)
-					(&This->leftKeys)[i - 1] = keyboard;
-			} else {
-				if (i == 3)
-					chrSelectExtra[0].input = nullptr;
-				else if (i != 3)
-					(&This->leftKeys)[i - 1] = nullptr;
-			}
-
-			if ((i == 3 && chrSelectExtra[0].selectState == 4) || (i != 3 && (&This->leftSelectionStage)[i - 1] == 4)) {
-				chrSelectExtra[b].input = keyboard;
-				if (chrSelectExtra[b].input && b == 0)
-					initExtraInputsLight(This, b + 1);
-			} else
-				chrSelectExtra[b].input = nullptr;
-			return;
-		}
-	}
-	chrSelectExtra[b].input = nullptr;
-}
-
-void __fastcall initExtraInputs(SokuLib::Select *This, int b)
-{
-	if (!chrSelectExtra[b].needInit) {
-		chrSelectExtra[b].input = getInputManager(2 + b);
-		if (chrSelectExtra[b].input && b == 0)
-			initExtraInputs(This, b + 1);
-		return;
-	}
-	initInputManagerArray(2 + b, false);
-
-	auto ptr = getInputManager(2 + b);
-
-	if (ptr != nullptr) {
-		chrSelectExtra[b].input = ptr;
-		if (chrSelectExtra[b].input && b == 0)
-			initExtraInputs(This, b + 1);
-		return;
-	}
-	initExtraInputsLight(This, b);
-}
-
-void __declspec(naked) initExtraInputsLight_hook()
-{
-	__asm {
-		MOV dword ptr [ESI + 0x14], EAX
-		TEST EAX, EAX
-		JZ ret_
-
-		PUSH EAX
-		PUSH EDI
-		PUSH ECX
-		PUSH EBX
-		PUSH EDX
-		PUSH ESI
-		MOV ECX, ESI
-		XOR EDX, EDX
-		CALL initExtraInputsLight
-		POP ESI
-		POP EDX
-		POP EBX
-		POP ECX
-		POP EDI
-		POP EAX
-	ret_:
-		XOR EDI, EDI
-		RET
-	}
-}
-
-void __declspec(naked) initExtraInputs_hook()
-{
-	__asm {
-		MOV dword ptr [ESI + 0x14], EAX
-		TEST EAX, EAX
-		JZ ret_
-
-		PUSH EAX
-		PUSH EDI
-		PUSH ECX
-		PUSH EBX
-		PUSH EDX
-		PUSH ESI
-		MOV ECX, ESI
-		XOR EDX, EDX
-		CALL initExtraInputs
-		POP ESI
-		POP EDX
-		POP EBX
-		POP ECX
-		POP EDI
-		POP EAX
-	ret_:
-		CMP EAX, EDI
-		RET
-	}
 }
 
 void __fastcall renderChrSelectChrData(int index)
@@ -2972,7 +2752,7 @@ void __fastcall renderChrSelectChrName(SokuLib::Select *This, int index)
 
 void __fastcall renderChrSelectProfile(int index)
 {
-	profiles[index + 2]->sprite.render(chrSelectExtra[index].profileBack->x2 + 88, chrSelectExtra[index].profileBack->y2 + 10);
+//	profiles[index + 2]->sprite.render(chrSelectExtra[index].profileBack->x2 + 88, chrSelectExtra[index].profileBack->y2 + 10);
 }
 
 void __declspec(naked) renderChrSelectChrData_hook()
@@ -3070,7 +2850,7 @@ void __fastcall changePalette(SokuLib::Select *This, int index, char palette, bo
 		for (int i = 0; i < 2; i++) {
 			if (index == i + 2)
 				continue;
-			if ((&assists.first)[i].character == mine.character && (&assists.first)[i].palette == palette && chrSelectExtra[i].selectState != 0) {
+			if ((&assists.first)[i].character == mine.character && (&assists.first)[i].palette == palette && (&This->leftSelectionStage)[i] > 4) {
 				palette = (palette + 7 - dir * 6) % 8;
 				ok = false;
 			}
@@ -3154,19 +2934,31 @@ void __fastcall chrSelectLastStep(SokuLib::v2::AnimationObject &obj, SokuLib::Ke
 		SokuLib::playSEWaveBuffer(0x27);
 }
 
-void updateCharacterSelect2(SokuLib::Select *This, unsigned i)
+void __fastcall updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 {
-	auto &dat = chrSelectExtra[i];
 	char buffer[128];
 	SokuLib::Vector2i size;
+	auto &dat = chrSelectExtra[i];
+	auto &state = (&This->leftSelectionStage)[i];
+	auto *input = (&This->leftKeys)[i];
 	auto &info = (&assists.first)[i];
 
-	if (!dat.input)
+	if (!input)
 		return;
-	switch (dat.selectState) {
-	case 0:
-		dat.chrHandler.axis = &dat.input->input.horizontalAxis;
+	//if (dat.chrHandler.pos == (&This->leftCharInput)[i].pos)
+	//	dat.chrHandler.pos = (dat.chrHandler.pos + 1) % dat.chrHandler.maxValue;
+	switch (state) {
+	case 4:
+		dat.chrHandler.axis = &input->input.horizontalAxis;
 		if (InputHandler_HandleInput(dat.chrHandler)) {
+			if (dat.chrHandler.pos == (&This->leftCharInput)[i].pos) {
+				if (input->input.horizontalAxis > 0)
+					dat.chrHandler.pos = (dat.chrHandler.pos + 1) % dat.chrHandler.maxValue;
+				else if (dat.chrHandler.pos == 0)
+					dat.chrHandler.pos = dat.chrHandler.maxValue - 1;
+				else
+					dat.chrHandler.pos--;
+			}
 			SokuLib::playSEWaveBuffer(0x27);
 			info.character = *((SokuLib::Character *(__thiscall *)(const void *, int))0x420380)(&This->offset_0x018[0x80], dat.chrHandler.pos);
 			sprintf(buffer, (char *)0x85785C, info.character);
@@ -3179,11 +2971,11 @@ void updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 			dat.cursorCounter = 30;
 			break;
 		}
-		if (dat.input->input.a == 1) {
+		if (input->input.a == 1) {
 			char *name = getCharName(info.character);
 
 			SokuLib::playSEWaveBuffer(0x28);
-			dat.selectState = 1;
+			state = 5;
 			changePalette(This, i + 2, info.palette, true);
 			sprintf(buffer, (char *)0x8578EC, info.character);
 			SokuLib::textureMgr.deallocate(dat.circleTexture);
@@ -3202,17 +2994,24 @@ void updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 			if (lastChrs[2 + i] != info.character)
 				dat.deckHandler.pos = 0;
 			dat.deckHandler.maxValue = loadedDecks[2 + i][info.character].size() + 3;
-		} else if (dat.input->input.b == 1) {
-		} else if (dat.input->input.d == 1) {
+		} else if (input->input.b == 1) {
+			SokuLib::playSEWaveBuffer(0x29);
+			state = 0;
+			dat.cursorCounter = 60;
+			if ((&SokuLib::leftPlayerInfo)[i].character == SokuLib::CHARACTER_RANDOM) {
+				(&SokuLib::leftPlayerInfo)[i].character = *((SokuLib::Character *(__thiscall *)(const void *, int))0x420380)(&This->offset_0x018[0x80], (&This->leftCharInput)[i].pos);
+				((void (__thiscall *)(void *, int, int))0x41FD80)(This, i, (&SokuLib::leftPlayerInfo)[i].character);
+			}
+		} else if (input->input.d == 1) {
 			SokuLib::playSEWaveBuffer(0x28);
-			dat.selectState = 3;
+			state = 7;
 			info.character = SokuLib::CHARACTER_RANDOM;
 			dat.charNameCounter = 15;
 		}
 		break;
-	case 1:
-		dat.palHandler.axis = &dat.input->input.verticalAxis;
-		dat.deckHandler.axis = &dat.input->input.horizontalAxis;
+	case 5:
+		dat.palHandler.axis = &input->input.verticalAxis;
+		dat.deckHandler.axis = &input->input.horizontalAxis;
 		if (InputHandler_HandleInput(dat.deckHandler))
 			SokuLib::playSEWaveBuffer(0x27);
 		if (InputHandler_HandleInput(dat.palHandler)) {
@@ -3233,48 +3032,47 @@ void updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 			dat.object->setPose(poseId);
 			dat.object->frameState.poseFrame = poseFrame;
 		}
-		if (dat.input->input.a == 1) {
+		if (input->input.a == 1) {
 			SokuLib::playSEWaveBuffer(0x28);
-			dat.selectState = 3;
-		} else if (dat.input->input.b == 1) {
+			state = 6;
+		} else if (input->input.b == 1) {
 			SokuLib::playSEWaveBuffer(0x29);
-			dat.selectState = 0;
+			state = 4;
 		}
 		break;
-	case 3:
-		chrSelectLastStep(*dat.object, *dat.input, i + 2, dat.selectState);
-		break;
-	case 4:
-		if (dat.input->input.b == 1) {
+	case 6:
+		if (input->input.a == 1) {
+			SokuLib::playSEWaveBuffer(0x28);
+			state++;
+			dat.object->setAction(1);
+			loadouts[i + 2] = loadoutHandler[i + 2].pos;
+			break;
+		}
+		if (input->input.d == 1) {
+			SokuLib::playSEWaveBuffer(0x28);
+			state = 7;
+			dat.object->setAction(1);
+			loadouts[i + 2] = sokuRand(3);
+			break;
+		}
+		if (input->input.b == 1) {
 			SokuLib::playSEWaveBuffer(0x29);
-			dat.selectState = 0;
+			state = 4;
+			break;
+		}
+		loadoutHandler[i + 2].axis = &input->input.verticalAxis;
+		if (InputHandler_HandleInput(loadoutHandler[i + 2]))
+			SokuLib::playSEWaveBuffer(0x27);
+		break;
+	case 7:
+		if (input->input.b == 1) {
+			SokuLib::playSEWaveBuffer(0x29);
+			state = 4;
 			if (info.character == SokuLib::CHARACTER_RANDOM) {
 				info.character = *((SokuLib::Character *(__thiscall *)(const void *, int))0x420380)(&This->offset_0x018[0x80], dat.chrHandler.pos);
 				dat.charNameCounter = 15;
 			}
 		}
-	}
-}
-
-bool updateCharacterSelect(SokuLib::Select *This)
-{
-	updateCharacterSelect2(This, 0U);
-	updateCharacterSelect2(This, 1U);
-	return chrSelectExtra[0].selectState == 4 && chrSelectExtra[1].selectState == 4;
-}
-
-void __declspec(naked) updateCharacterSelect_hook()
-{
-	__asm {
-		PUSH ESI
-		CALL updateCharacterSelect
-		POP ESI
-		TEST EAX, EAX
-		JNZ ok
-		JMP updateCharacterSelect_hook_failAddr
-	ok:
-		CMP byte ptr [ESI + 0x22C0], 0x4
-		JMP updateCharacterSelect_hook_retAddr
 	}
 }
 
@@ -3290,8 +3088,6 @@ void __fastcall onStageSelectCancel(SokuLib::Select *This, int index)
 {
 	if ((&assists.first)[index].character == SokuLib::CHARACTER_RANDOM)
 		(&assists.first)[index].character = (*(SokuLib::Character **)&This->offset_0x018[0x84])[chrSelectExtra[index].chrHandler.pos];
-	chrSelectExtra[index].selectState = 0;
-	chrSelectExtra[index].input = chrSelectExtraInputs[index];
 }
 
 void __declspec(naked) onStageSelectCancel_hook()
@@ -3301,12 +3097,6 @@ void __declspec(naked) onStageSelectCancel_hook()
 		MOV ECX, ESI
 		JMP onStageSelectCancel
 	}
-}
-
-void onCharacterSelectInit()
-{
-	chrSelectExtraInputs[0] = nullptr;
-	chrSelectExtraInputs[1] = nullptr;
 }
 
 int __fastcall CTitle_OnProcess(SokuLib::Title *This)
@@ -3724,59 +3514,6 @@ static void loadAllExistingCards()
 	}
 }
 
-void loadProfile(const char *path, SokuLib::Profile *profileObj, const char *defaultVal, unsigned char r, unsigned char g, unsigned char b)
-{
-	auto initProfile = (bool (__thiscall *)(SokuLib::Profile *))0x4358C0;
-	auto saveProfile = (bool (__thiscall *)(SokuLib::Profile *, const char *path))0x434FB0;
-	auto changeProfile = (bool (__thiscall *)(SokuLib::Profile *, const char *path))0x435300;
-	std::ifstream stream{path};
-	std::string profile;
-	auto createProfileSprite = (void (__thiscall *)(SokuLib::Profile *This, unsigned char r, unsigned char g, unsigned char b))0x434C80;
-
-	stream >> profile;
-	if (!stream)
-		profile = defaultVal;
-	if (!changeProfile(profileObj, (profile + ".pf").c_str())) {
-		if (defaultVal == profile || changeProfile(profileObj, (std::string(defaultVal) + ".pf").c_str())) {
-			initProfile(profileObj);
-			saveProfile(profileObj, (std::string(defaultVal) + ".pf").c_str());
-		}
-	}
-	createProfileSprite(profileObj, r, g, b);
-}
-
-void reloadProfile(SokuLib::Profile *profileObj, const char *defaultVal, unsigned char r, unsigned char g, unsigned char b)
-{
-	auto initProfile = (void (__thiscall *)(SokuLib::Profile *))0x4358C0;
-	auto reloadProfile = (bool (__thiscall *)(SokuLib::Profile *))0x4355F0;
-	auto saveProfile = (void (__thiscall *)(SokuLib::Profile *, const char *path))0x434FB0;
-	auto changeProfile = (bool (__thiscall *)(SokuLib::Profile *, const char *path))0x435300;
-	auto createProfileSprite = (void (__thiscall *)(SokuLib::Profile *This, unsigned char r, unsigned char g, unsigned char b))0x434C80;
-
-	if (!reloadProfile(profileObj)) {
-		if (changeProfile(profileObj, defaultVal)) {
-			initProfile(profileObj);
-			saveProfile(profileObj, defaultVal);
-		}
-	}
-	createProfileSprite(profileObj, r, g, b);
-}
-
-static void saveProfiles()
-{
-	std::ofstream s1{"profile3p.txt"};
-	std::ofstream s2{"profile4p.txt"};
-
-	s1 << loadedProfiles[2];
-	s2 << loadedProfiles[3];
-}
-
-static void reloadProfiles()
-{
-	reloadProfile(profiles[2], "profile3p.pf", 0xA0, 0xA0, 0xFF);
-	reloadProfile(profiles[3], "profile4p.pf", 0xFF, 0x80, 0x80);
-}
-
 static void initAssets()
 {
 	if (assetsLoaded)
@@ -3785,8 +3522,6 @@ static void initAssets()
 	loadAllExistingCards();
 	loadDefaultDecks();
 	loadCardAssets();
-	loadProfile("profile3p.txt", profiles[2], "profile3p", 0xA0, 0xA0, 0xFF);
-	loadProfile("profile4p.txt", profiles[3], "profile4p", 0xFF, 0x80, 0x80);
 
 	gagesEffects[0].texture.loadFromGame("data/character/sanae/gageBa000.cv0");
 	gagesEffects[0].setSize(gagesEffects[0].texture.getSize());
@@ -4284,10 +4019,10 @@ static void __fastcall handleProfileChange(SokuLib::Profile *This, SokuLib::Stri
 	int index = 0;
 	bool hasBackup;
 
-	while (index < 4 && This != profiles[index])
+	while (index < 2)
 		index++;
-	if (index != 4)
-		loadedProfiles[index] = profileName;
+	if (index != 2)
+		loadedProfiles_[index] = profileName;
 	printf("Loading %s in buffer %i\n", profile.c_str(), index);
 
 	bool result = false;
@@ -4366,7 +4101,7 @@ static void onDeckSaved()
 		elem.second.pop_back();
 	if (editSelectedProfile != 4) {
 		loadedDecks[editSelectedProfile] = toSave;
-		path = "profile/" + loadedProfiles[editSelectedProfile] + ".json";
+		path = "profile/" + loadedProfiles_[editSelectedProfile] + ".json";
 	} else
 		path = "profile/" + lastLoadedProfile + ".json";
 
@@ -4384,38 +4119,11 @@ static void onDeckSaved()
 		(*menu->editedDeck)[i] = 1;
 }
 
-void __declspec(naked) getProfileInfo()
-{
-	__asm {
-		MOV EAX, [profiles + EAX * 4]
-		RET
-	}
-}
-
 void drawGradiantBar(float x, float y, float maxY)
 {
 	if (y == 114)
 		y = 90;
 	s_originalDrawGradiantBar(x, y, maxY);
-}
-
-void onMenuTopProfileInit()
-{
-	((SokuLib::CDesign *)0x89A68C)->getById(&profileHandlers[0], 102);
-	((SokuLib::CDesign *)0x89A68C)->getById(&profileHandlers[1], 103);
-	profileHandlers[0]->active = true;
-	profileHandlers[1]->active = true;
-}
-
-void renderExtraProfilesTop()
-{
-	for (int i = 0; i < 2; i++) {
-		SokuLib::Sprite &sprite = profiles[i + 2]->sprite;
-
-		sprite.setColor((*(unsigned char *)0x89A457 << 24) | 0xFFFFFF);
-		sprite.render(profileHandlers[i]->x2 + 88, profileHandlers[i]->y2 + 10);
-		sprite.setColor(0xFFFFFFFF);
-	}
 }
 
 void __declspec(naked) selectProfileSpriteColor()
@@ -4426,18 +4134,6 @@ void __declspec(naked) selectProfileSpriteColor()
 		AND ECX, 1
 		RET
 	}
-}
-
-void chrSelect_pushActiveInputs()
-{
-	SokuLib::Select *This;
-	auto unkSTL_push = (void (__thiscall *)(void *, void *))0x44BFE0;
-
-	__asm MOV This, ESI;
-	if (chrSelectExtra[0].input)
-		unkSTL_push(&This->offset_0x018[0x60], &chrSelectExtra[0].input);
-	if (chrSelectExtra[1].input)
-		unkSTL_push(&This->offset_0x018[0x60], &chrSelectExtra[1].input);
 }
 
 unsigned chrKeysContinue = 0x46C908;
@@ -4702,6 +4398,82 @@ __declspec(naked) void chrSelectLastStep_hook()
 	}
 }
 
+constexpr unsigned step3Location = 0x420502;
+constexpr unsigned breakLocation = 0x420775;
+
+void __declspec(naked) chrSelectExtraSteps_hook()
+{
+	__asm {
+		JZ case3
+		PUSH EBP
+		PUSH EDI
+		PUSH EBX
+		PUSH ESI
+		MOV ECX, ESI
+		MOV EDX, EBP
+		CALL updateCharacterSelect2
+		POP ESI
+		POP EBX
+		POP EDI
+		POP EBP
+		JMP [breakLocation]
+	case3:
+		JMP [step3Location]
+	}
+}
+
+constexpr unsigned controllerUpdateOverrideRet = 0x46C902;
+
+void __declspec(naked) controllerUpdateOverride()
+{
+	__asm {
+		CMP [ESI + 0x14E], 2
+		PUSH EBX
+		PUSH EBP
+		PUSH EDI
+		JGE noUpdateController
+		MOV EDI, [EAX]
+		MOV EAX, [EDI]
+		MOV EDX, [EAX + 4]
+		MOV ECX, EDI
+		CALL EDX
+	noUpdateController:
+		JMP [controllerUpdateOverrideRet]
+	}
+}
+
+static_assert(sizeof(*chrSelectExtra) == 744);
+static_assert(offsetof(ExtraChrSelectData, cursorCounter) == 728);
+
+void __declspec(naked) firstChrSelected()
+{
+	__asm {
+		LEA EAX, [chrSelectExtra]
+		TEST EBP, EBP
+		JZ zero
+		MOV [EAX + 728 + 744], 60
+		MOV byte ptr [ESI + EBP * 0x1 + 0x22C0], 0x4
+		RET
+	zero:
+		MOV [EAX + 728], 60
+		MOV byte ptr [ESI + EBP * 0x1 + 0x22C0], 0x4
+		RET
+	}
+}
+
+void __declspec(naked) disableP34Pause()
+{
+	__asm {
+		MOVSX EDX, byte ptr [ECX + 0x14E]
+		CMP EDX, 1
+		JG end
+		MOV EDX, dword ptr [EAX]
+		CMP dword ptr [EDX + 0x58], 0x1
+	end:
+		RET
+	}
+}
+
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
 	DWORD old;
 
@@ -4743,8 +4515,6 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 
 	new SokuLib::Trampoline(0x435377, onProfileChanged, 7);
 	new SokuLib::Trampoline(0x450121, onDeckSaved, 6);
-
-	SokuLib::TamperNearJmp(0x4080B2, saveProfiles);
 
 	ogBattleMgrHandleCollision = SokuLib::TamperNearJmpOpr(0x47d618, CBattleManager_HandleCollision);
 	SokuLib::TamperNearJmpOpr(0x47d64c, CBattleManager_HandleCollision);
@@ -4790,6 +4560,9 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	memcpy((void*)0x43EA13, chrSelectInputInitPatch, sizeof(chrSelectInputInitPatch));
 	// Disable card highlight effect
 	SokuLib::TamperNearJmp(0x47F973, 0x47FA4D);
+
+	SokuLib::TamperNearCall(0x48227C, disableP34Pause);
+	*(char *)0x482281 = 0x90;
 
 	new SokuLib::Trampoline(0x4796EE, updateOtherHud, 5);
 
@@ -4842,8 +4615,6 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	new SokuLib::Trampoline(0x46DFC0, swapStuff, 5);
 	SokuLib::TamperNearJmp(0x46E002, restoreOldHud);
 
-	new SokuLib::Trampoline(0x4442CD, onMenuTopProfileInit, 5);
-	new SokuLib::Trampoline(0x4448C0, renderExtraProfilesTop, 7);
 	*(char *)0x44CFEE = 0x50;
 	SokuLib::TamperNearCall(0x44CFD8, selectProfileSpriteColor);
 
@@ -4853,39 +4624,6 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	*(char *)0x40D27B = 0x91;
 	*(char *)0x40D245 = 0x1C;
 	memset((char *)0x40D27C, 0x90, 7);
-
-	// Chr select input stuff
-	SokuLib::TamperNearCall(0x43E6C8, checkUsedInputs);
-	memset((void *)(0x43E6C8 + 5), 0x90, 0x43E70B - 0x43E6C8 - 5);
-	*(char *)0x43E6CD = 0x8A;
-	*(char *)0x43E6CE = 0x86;
-	*(char *)0x43E6CF = 0x78;
-	*(char *)0x43E6D0 = 0x86;
-	*(char *)0x43E6D1 = 0x89;
-	*(char *)0x43E6D2 = 0x00;
-	*(char *)0x43E6D3 = 0x3C;
-	*(char *)0x43E6D4 = 0xFE;
-	*(char *)0x43E6D5 = 0x75;
-	*(char *)0x43E6D6 = 0x02;
-	*(char *)0x43E6D7 = 0x5E;
-	*(char *)0x43E6D8 = 0xC3;
-	*(char *)0x43E72C = 0xB8;
-	*(int  *)0x43E72D = 0x8986A8;
-	SokuLib::TamperNearCall(0x43E731, setInputPointer);
-	*(char *)0x43E736 = 0x90;
-	SokuLib::TamperNearCall(0x43E723, setInputPointer);
-	*(char *)0x43E728 = 0x90;
-	*(char *)0x43E729 = 0x90;
-	SokuLib::TamperNearCall(0x43E6A5, cmpInputPointer);
-	*(char *)0x43E6AA = 0x90;
-	*(char *)0x43E6AB = 0x90;
-	*(char *)0x43E6AC = 0x90;
-	SokuLib::TamperNearJmp(0x43E044, loadInputPointer);
-	SokuLib::TamperNearCall(0x42289D, initExtraInputs_hook);
-	SokuLib::TamperNearCall(0x422871, initExtraInputsLight_hook);
-
-	new SokuLib::Trampoline(0x43EA0D, onCharacterSelectInit, 6);
-	new SokuLib::Trampoline(0x42296C, chrSelect_pushActiveInputs, 5);
 
 	og_SelectConstruct = SokuLib::TamperNearJmpOpr(0x41E55F, CSelect_construct);
 
@@ -4899,19 +4637,18 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	SokuLib::TamperNearCall(0x421350, renderChrSelectProfile_hook);
 	*(char *)0x421355 = 0x90;
 
-	SokuLib::TamperNearJmp(0x4208ED, updateCharacterSelect_hook);
-	*(char *)0x4208F2 = 0x90;
-	*(char *)0x4208F3 = 0x90;
-	*(char *)0x4208FC = 0x04;
-	*(char *)0x4208CB = 0x04;
-	*(char *)0x422865 = 0x04;
-	*(char *)0x4227BD = 0x04;
+	memset((void *)0x4208C4, 0x90, 8);
+	SokuLib::TamperNearCall(0x4208C4, firstChrSelected);
+	*(char *)0x4208F3 = 0x07;
+	*(char *)0x4208FC = 0x07;
+	*(char *)0x422865 = 0x07;
+	*(char *)0x4227BD = 0x07;
 	SokuLib::TamperNearJmpOpr(0x420683, selectRandomDeck_hook);
 	SokuLib::TamperNearJmpOpr(0x42079B, selectRandomDeck_hook);
 	memset((void *)0x420669, 0x90, 0x12);
 	memset((void *)0x42078C, 0x90, 0xF);
 	*(void **)0x42094C = chrSelectLastStep_hook;
-	SokuLib::TamperNearJmpOpr(0x4204F6, 0x420502);
+	SokuLib::TamperNearJmpOpr(0x4204F6, chrSelectExtraSteps_hook);
 
 	memset((void *)0x42081E, 0x90, 0x42085F - 0x42081E);
 	SokuLib::TamperNearCall(0x420849, changePalette_hook0);
@@ -4920,24 +4657,6 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 
 	memset((void *)0x46012A, 0x90, 13);
 	memset((void *)0x4622A4, 0x90, 13);
-
-	*(char *)0x44D247 = 160;
-	*(char *)0x44CC0E = 6;
-	*(char *)0x44D227 = 6;
-	*(char *)0x44CF61 = 6;
-	*(char *)0x44CC44 = 5;
-	*(char *)0x44CC5A = 0x47;
-	*(int *)0x44CE64 = 0x44CC55;
-	*(int *)0x44CE68 = 0x44CC55;
-	*(int *)0x44CE6C = 0x44CC55;
-	*(int *)0x44CE70 = 0x44CDF0;
-	*(int *)0x44CE74 = 0x44CE47;
-	SokuLib::TamperNearJmp(0x43E014, getProfileInfo);
-
-	memset(extraProfiles, 0, sizeof(extraProfiles));
-	*(int *)&profiles[2]->sprite = 0x8576AC;
-	*(int *)&profiles[3]->sprite = 0x8576AC;
-	SokuLib::TamperNearJmp(0x43E006, reloadProfiles);
 
 	const unsigned char profileExtraInit[] = {
 		// The top part here is exactly what the game did before but shorter in size to fit more assembly
@@ -4969,6 +4688,8 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	memcpy((void*)0x435988, profileExtraInit, sizeof(profileExtraInit));
 
 	SokuLib::TamperNearJmp(0x46C902, onChrKeys);
+	memset((void *)0x46C8F4, 0x90, 14);
+	SokuLib::TamperNearJmp(0x46C8F4, controllerUpdateOverride);
 	*(char *)0x46C907 = 0x90;
 
 	// Enable twilight weather
@@ -4978,7 +4699,6 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 
 	og_handleInputs = SokuLib::TamperNearJmpOpr(0x48224D, handlePlayerInputs);
 	s_origLoadDeckData = SokuLib::TamperNearJmpOpr(0x437D23, loadDeckData);
-	og_FUN4098D6 = SokuLib::TamperNearJmpOpr(0x43F136, loadExtraPlayerInputs);
 	::VirtualProtect((PVOID)TEXT_SECTION_OFFSET, TEXT_SECTION_SIZE, old, &old);
 
 	::FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
