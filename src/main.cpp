@@ -17,7 +17,7 @@
 #define printf(...)
 #endif
 
-#define SLOW_TAG_STARTUP 15
+#define SLOW_TAG_STARTUP 60
 #define DEFENSE_ASSIST_STARTUP 20
 #define FONT_HEIGHT 16
 #define TEXTURE_SIZE 0x200
@@ -265,6 +265,7 @@ struct ChrInfo {
 	bool started = false;
 	bool starting = false;
 	bool tagging = false;
+	bool deathTag = false;
 	bool slowTag = false;
 	bool ending = false;
 	bool ended = false;
@@ -361,6 +362,7 @@ static bool copyBoxDisplayed = false;
 static bool renameBoxDisplayed = false;
 static bool deleteBoxDisplayed = false;
 static unsigned editSelectedDeck = 0;
+static unsigned tagInvul = 0;
 static std::vector<Deck> editedDecks;
 static char editingBoxObject[0x164];
 static unsigned char copyBoxSelectedItem = 0;
@@ -804,9 +806,22 @@ void updateObject(SokuLib::CharacterManager *main, SokuLib::CharacterManager *mg
 {
 	auto &batlMgr = SokuLib::getBattleMgr();
 
+	if (tagInvul) {
+		main->projectileInvulTimer = 2;
+		main->meleeInvulTimer = 2;
+		main->grabInvulTimer = 2;
+		mgr->projectileInvulTimer = 2;
+		mgr->meleeInvulTimer = 2;
+		mgr->grabInvulTimer = 2;
+		tagInvul--;
+	}
 	if (chr.tagging) {
 		if (main->objectBase.renderInfos.yRotation != 0) {
 			main->objectBase.renderInfos.yRotation -= 10;
+		} else if (chr.deathTag && chr.tagTimer < 60) {
+			chr.tagTimer++;
+			main->timeStop = 2;
+			tagInvul = 60;
 		} else if (chr.slowTag && chr.tagTimer < SLOW_TAG_STARTUP) {
 			chr.tagTimer++;
 		} else {
@@ -872,17 +887,21 @@ void updateObject(SokuLib::CharacterManager *main, SokuLib::CharacterManager *mg
 			*(unsigned short *)((int)mgr + 0x7D0) = 0;
 			mgr->objectBase.speed.x = 0;
 		}
-	} else if (mgr->objectBase.action >= SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN && mgr->objectBase.action <= SokuLib::ACTION_NEUTRAL_TECH) {
+	} else if (
+		mgr->objectBase.action >= SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN &&
+		mgr->objectBase.action <= SokuLib::ACTION_NEUTRAL_TECH &&
+		mgr->objectBase.action != SokuLib::ACTION_KNOCKED_DOWN_STATIC
+	) {
 		if (!chr.gotHit) {
-			chr.cd += 900;
-			chr.maxCd += 900;
+			chr.cd += 600;
+			chr.maxCd += 600;
 			chr.nb = 0;
 			chr.started = true;
 			chr.starting = false;
 			chr.ending = false;
 			chr.ended = false;
 		}
-		chr.recovery = 30;
+		chr.recovery = 5;
 		chr.gotHit = true;
 	} else if (!chr.started) {
 		if (chr.startAction) {
@@ -1247,6 +1266,8 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 		for (; i < 4; i++) {
 			if (i >= 2 && dataMgr->players[i]->objectBase.renderInfos.yRotation == 90)
 				continue;
+			if (i >= 2 && dataMgr->players[i]->objectBase.hp == 0)
+				continue;
 			if (*SokuLib::camera.offset_0x44 > dataMgr->players[i]->objectBase.position.x)
 				SokuLib::camera.offset_0x44 = &dataMgr->players[i]->objectBase.position.x;
 			if (*SokuLib::camera.offset_0x48 < dataMgr->players[i]->objectBase.position.x)
@@ -1266,6 +1287,7 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 
 		if (dataMgr->players[i]->objectBase.hp == 0 && This->matchState <= 2) {
 			SokuLib::playSEWaveBuffer(44);
+			info.deathTag = true;
 			goto swap;
 		} else if (
 			keys &&
@@ -1274,6 +1296,7 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 			keys->keymapManager->input.horizontalAxis == 0 &&
 			info.cd == 0
 		) {
+			info.deathTag = false;
 		swap:
 			auto arr = *(SokuLib::CharacterManager ***)(*(int *)SokuLib::ADDR_GAME_DATA_MANAGER + 0x40);
 			auto old = dataMgr->players[i + 2];
@@ -1361,6 +1384,10 @@ int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
 	players[3]->roundLost = players[1]->roundLost;
 	players[2]->kdAnimationFinished = players[0]->kdAnimationFinished;
 	players[3]->kdAnimationFinished = players[1]->kdAnimationFinished;
+	players[0]->score = max(players[0]->score, players[2]->score);
+	players[1]->score = max(players[1]->score, players[3]->score);
+	players[2]->score = max(players[0]->score, players[2]->score);
+	players[3]->score = max(players[1]->score, players[3]->score);
 	return ret;
 }
 
@@ -1462,9 +1489,9 @@ void generateFakeDecks()
 	convertDeckToSokuFormat(tmp, SokuLib::leftPlayerInfo.effectiveDeck);
 	generateFakeDeck(SokuLib::rightChar, lastChrs[1], selectedDecks[1], loadedDecks[1][SokuLib::rightChar], tmp);
 	convertDeckToSokuFormat(tmp, SokuLib::rightPlayerInfo.effectiveDeck);
-	generateFakeDeck(assists.first.character, lastChrs[2], chrSelectExtra[0].deckHandler.pos, loadedDecks[2][assists.first.character], tmp);
+	generateFakeDeck(assists.first.character, lastChrs[2], chrSelectExtra[0].deckHandler.pos, loadedDecks[0][assists.first.character], tmp);
 	convertDeckToSokuFormat(tmp, assists.first.effectiveDeck);
-	generateFakeDeck(assists.second.character, lastChrs[3], chrSelectExtra[1].deckHandler.pos, loadedDecks[3][assists.second.character], tmp);
+	generateFakeDeck(assists.second.character, lastChrs[3], chrSelectExtra[1].deckHandler.pos, loadedDecks[1][assists.second.character], tmp);
 	convertDeckToSokuFormat(tmp, assists.second.effectiveDeck);
 }
 
@@ -1766,9 +1793,9 @@ int __fastcall CSelect_OnRender(SokuLib::Select *This)
 	if (This->rightSelectionStage == 1)
 		renderDeck(SokuLib::rightChar, selectedDecks[1], loadedDecks[1][SokuLib::rightChar], {28, 384});
 	if (This->leftSelectionStage == 5)
-		renderDeck(assists.first.character, chrSelectExtra[0].deckHandler.pos, loadedDecks[2][assists.first.character], {178, 98});
+		renderDeck(assists.first.character, chrSelectExtra[0].deckHandler.pos, loadedDecks[0][assists.first.character], {178, 98});
 	if (This->rightSelectionStage == 5)
-		renderDeck(assists.second.character, chrSelectExtra[1].deckHandler.pos, loadedDecks[3][assists.second.character], {178, 384});
+		renderDeck(assists.second.character, chrSelectExtra[1].deckHandler.pos, loadedDecks[1][assists.second.character], {178, 384});
 
 	if (This->leftSelectionStage == 3)
 		renderLoadout(SokuLib::leftChar, loadoutHandler[0].pos, {45, 28});
@@ -2183,25 +2210,10 @@ void __stdcall loadDeckData(char *charName, void *csvFile, SokuLib::DeckInfo &de
 	if (!spawned || init) {
 		if (spawned)
 			init = false;
+		tagInvul = 0;
 		anim = false;
 		spawned = true;
 		index = 2;
-
-		SokuLib::CharacterManager** players = (SokuLib::CharacterManager**)((int)&SokuLib::getBattleMgr() + 0xC);
-
-		assists.first.keyManager = SokuLib::leftPlayerInfo.keyManager;
-		assists.second.keyManager = SokuLib::rightPlayerInfo.keyManager;
-
-		puts("Not spawned. Loading both assisters");
-		puts("Loading character 1");
-		((void (__thiscall *)(GameDataManager*, int, SokuLib::PlayerInfo &))0x46da40)(dataMgr, 2, assists.first);
-		(*(void (__thiscall **)(SokuLib::CharacterManager *))(*(int *)dataMgr->players[2] + 0x44))(dataMgr->players[2]);
-		players[2] = dataMgr->players[2];
-
-		puts("Loading character 2");
-		((void (__thiscall *)(GameDataManager*, int, SokuLib::PlayerInfo &))0x46da40)(dataMgr, 3, assists.second);
-		(*(void (__thiscall **)(SokuLib::CharacterManager *))(*(int *)dataMgr->players[3] + 0x44))(dataMgr->players[3]);
-		players[3] = dataMgr->players[3];
 
 		std::map<std::pair<unsigned, unsigned>, bool> loaded;
 
@@ -2224,6 +2236,22 @@ void __stdcall loadDeckData(char *charName, void *csvFile, SokuLib::DeckInfo &de
 		currentChr.second = ChrInfo();
 		currentChr.second.loadoutIndex = loadouts[3];
 		currentChr.second.chr = assists.second.character;
+
+		SokuLib::CharacterManager** players = (SokuLib::CharacterManager**)((int)&SokuLib::getBattleMgr() + 0xC);
+
+		assists.first.keyManager = SokuLib::leftPlayerInfo.keyManager;
+		assists.second.keyManager = SokuLib::rightPlayerInfo.keyManager;
+
+		puts("Not spawned. Loading both assisters");
+		puts("Loading character 1");
+		((void (__thiscall *)(GameDataManager*, int, SokuLib::PlayerInfo &))0x46da40)(dataMgr, 2, assists.first);
+		(*(void (__thiscall **)(SokuLib::CharacterManager *))(*(int *)dataMgr->players[2] + 0x44))(dataMgr->players[2]);
+		players[2] = dataMgr->players[2];
+
+		puts("Loading character 2");
+		((void (__thiscall *)(GameDataManager*, int, SokuLib::PlayerInfo &))0x46da40)(dataMgr, 3, assists.second);
+		(*(void (__thiscall **)(SokuLib::CharacterManager *))(*(int *)dataMgr->players[3] + 0x44))(dataMgr->players[3]);
+		players[3] = dataMgr->players[3];
 		init = false;
 		printf("%p %p\n", dataMgr->players[2], dataMgr->players[3]);
 		// Init
@@ -2237,14 +2265,17 @@ void __stdcall loadDeckData(char *charName, void *csvFile, SokuLib::DeckInfo &de
 	unsigned chr = index == 0 ? SokuLib::leftChar : (index == 1 ? SokuLib::rightChar : (&assists.first)[index - 2].character);
 	auto spells = loadedData[chr][loadouts[index]].spells;
 
-	index++;
-	if (spells.empty())
+	if (spells.empty()) {
+		printf("No fake deck for %s:%i (Index %i, Id id)\n", charName, loadouts[index], index, chr);
+		index++;
 		return s_origLoadDeckData(charName, csvFile, deck, param4, newDeck);
+	}
 
 	auto size = newDeck.size;
 	auto cards = new short[size];
 
 	printf("Creating a fake deck for %s:%i (Index %i, Id id)\n", charName, loadouts[index], index, chr);
+	index++;
 	for (int i = 0; i < size; i++)
 		cards[i] = newDeck[i];
 	newDeck.clear();
@@ -2733,7 +2764,7 @@ void __fastcall renderChrSelectChrName(SokuLib::Select *This, int index)
 	else
 		offset = (dat.charNameCounter * dat.charNameCounter) / (15.f * 15.f);
 
-	This->charNameSprites[info.character == SokuLib::CHARACTER_RANDOM ? 20 : info.character].render(offset * 200 + dat.name->x2, dat.name->y2);
+	This->charNameSprites[info.character == SokuLib::CHARACTER_RANDOM ? 20 : info.character].render(offset * 300 + dat.name->x2, dat.name->y2);
 	if (dat.object && info.character != SokuLib::CHARACTER_RANDOM) {
 		if (dat.chrCounter <= 0)
 			offset = 0;
@@ -2993,7 +3024,7 @@ void __fastcall updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 			dat.object->setPose(0);
 			if (lastChrs[2 + i] != info.character)
 				dat.deckHandler.pos = 0;
-			dat.deckHandler.maxValue = loadedDecks[2 + i][info.character].size() + 3;
+			dat.deckHandler.maxValue = loadedDecks[i][info.character].size() + 3;
 		} else if (input->input.b == 1) {
 			SokuLib::playSEWaveBuffer(0x29);
 			state = 0;
@@ -4016,12 +4047,14 @@ static void __fastcall handleProfileChange(SokuLib::Profile *This, SokuLib::Stri
 	const char *arg = *val;
 	std::string profileName{arg, strstr(arg, ".pf")};
 	std::string profile = "profile/" + profileName + ".json";
-	int index = 0;
+	int index = 4;
 	bool hasBackup;
 
-	while (index < 2)
-		index++;
-	if (index != 2)
+	if (This == &SokuLib::profile1)
+		index = 0;
+	if (This == &SokuLib::profile2)
+		index = 1;
+	if (index != 4)
 		loadedProfiles_[index] = profileName;
 	printf("Loading %s in buffer %i\n", profile.c_str(), index);
 
@@ -4143,8 +4176,24 @@ bool initStartingKeys(SokuLib::CharacterManager * const assist)
 {
 	auto &chr = (&currentChr.first)[assist->objectBase.offset_0x14E[0] & 1];
 
-	if (assist->objectBase.offset_0x14E[0] < 2)
+	if (assist->objectBase.offset_0x14E[0] < 2) {
+		if (chr.tagging) {
+			if (chr.deathTag && chr.tagTimer < 60)
+				return false;
+			if (chr.slowTag && chr.tagTimer < SLOW_TAG_STARTUP)
+				return false;
+		}
+		if (tagInvul) {
+			assist->keyManager->keymapManager->input.a = 0;
+			assist->keyManager->keymapManager->input.b = 0;
+			assist->keyManager->keymapManager->input.c = 0;
+			assist->keyManager->keymapManager->input.changeCard = 0;
+			assist->keyManager->keymapManager->input.spellcard = 0;
+			assist->keyManager->keymapManager->input.select = 0;
+			return true;
+		}
 		return true;
+	}
 	if (assist->keyManager->keymapManager->input.changeCard)
 		assist->keyMap.changeCard++;
 	else
