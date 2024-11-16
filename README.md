@@ -1,5 +1,5 @@
-# AssistSoku
-Adds tag fighter assists in Touhou 12.3
+# TagSoku
+Adds tag fighter mechanics in Touhou 12.3
 
 # Build
 Requires CMake, git and the VisualStudio compiler (MSVC).
@@ -18,8 +18,8 @@ drop the folder onto the console.
 
 Now let's download the repository and initialize it for the first time
 ```
-git clone https://github.com/SokuDev/AssistSoku
-cd AssistSoku
+git clone https://github.com/SokuDev/TagSoku
+cd TagSoku
 git submodule init
 git submodule update
 mkdir build
@@ -30,7 +30,7 @@ Note that if you want to build in Release, you should replace `-DCMAKE_BUILD_TYP
 
 ## Compiling
 Now, to build the mod, go to the build directory (if you did the previous step you already are)
-`cd C:\Users\PinkySmile\SokuProjects\AssistSoku\build` and invoke the compiler by running `cmake --build . --target AssistSoku`.
+`cd C:\Users\PinkySmile\SokuProjects\TagSoku\build` and invoke the compiler by running `cmake --build . --target TagSoku`.
 
-You should find the resulting AssistSoku.dll mod inside the build folder that can be to SWRSToys.ini.
-In my case, I would add this line to it `AssistSoku=C:/Users/PinkySmile/SokuProjects/AssistSoku/build/AssistSoku.dll`.
+You should find the resulting TagSoku.dll mod inside the build folder that can be to SWRSToys.ini.
+In my case, I would add this line to it `TagSoku=C:/Users/PinkySmile/SokuProjects/TagSoku/build/TagSoku.dll`.
