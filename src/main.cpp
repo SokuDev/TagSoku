@@ -17,6 +17,7 @@
 #define printf(...)
 #endif
 
+#define TAG_CD 600
 #define SLOW_TAG_STARTUP 60
 #define DEFENSE_ASSIST_STARTUP 20
 #define FONT_HEIGHT 16
@@ -844,16 +845,19 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 			displayTaggingEffect(*mgr);
 		}
 	}
-	if (mgr->timeStop && chr.cost) {
-		mgr->handInfo.hand[0].id = chr.cardName;
+	if (mgr->timeStop && chr.cardName) {
 		oldHud = *(int *)0x8985E8;
 		if (originalIndex(mgr) >= 2)
 			*(int *)0x8985E8 = (int)&hud2;
-		forceCardCost = true;
-		mgr->consumeCard(0, chr.cost, 0x3C);
-		forceCardCost = false;
+		//forceCardCost = true;
+		//mgr->consumeCard(0, chr.cost, 0x3C);
+		//mgr->handInfo.hand.push_back({static_cast<unsigned short>(chr.cardName), 1});
+		//mgr->handInfo.cardCount++;
+		//mgr->consumeCard(mgr->handInfo.cardCount - 1, 1, 60);
+		//forceCardCost = false;
 		*(int *)0x8985E8 = oldHud;
 		chr.cost = 0;
+		chr.cardName = 0;
 	}
 	if (mgr->renderInfos.yRotation == 90) {
 		mgr->grabInvulTimer = 2;
@@ -869,9 +873,13 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 			mgr->setAction(SokuLib::ACTION_IDLE);
 		if (SokuLib::mainMode == SokuLib::BATTLE_MODE_PRACTICE)
 			chr.cd = 0;
-		chr.cd -= !!chr.cd;
-		if (main->weatherId == SokuLib::WEATHER_TWILIGHT)
+		for (int i = 0; i < 2; i++) {
+			if (chr.cost && i)
+				continue;
 			chr.cd -= !!chr.cd;
+			if (main->weatherId == SokuLib::WEATHER_TWILIGHT)
+				chr.cd -= !!chr.cd;
+		}
 		if (mgr->frameState.actionId < SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN)
 			mgr->position = main->position;
 		if (loadedData[chr.chr][chr.loadoutIndex].canFly) {
@@ -993,6 +1001,7 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 		if (mgr->frameState.actionId != chr.end && mgr->frameState.actionId < SokuLib::ACTION_5A) {
 			chr.ending = false;
 			chr.ended = true;
+			forceCardCost = false;
 			chr.currentStance = chr.stance;
 			chr.stanceCtr++;
 			if (chr.currentStance == 2) {
@@ -1117,10 +1126,11 @@ static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2:
 	chr.slowTag = false;
 	chr.cutscene = 2;
 	chr.nb = 1;
-	chr.cd = 600;
+	chr.cd = TAG_CD;
+	chr.maxCd = TAG_CD;
+	forceCardCost = true;
 	chr.ctr = 0;
 	chr.cost = 0;
-	chr.maxCd = 600;
 	chr.tagTimer = 0;
 	chr.collisionLimit.reset();
 	chr.recovery = 0;
@@ -1141,16 +1151,16 @@ bool initAttack(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &ch
 	if (atk) {
 		unsigned stance = chr.currentStance;
 
-		if (atk->cost == 0);
-		else if (obj->weatherId != SokuLib::WEATHER_MOUNTAIN_VAPOR) {
-			unsigned cost = atk->cost;
+		//if (atk->cost == 0);
+		//else if (obj->weatherId != SokuLib::WEATHER_MOUNTAIN_VAPOR) {
+		//	unsigned cost = atk->cost;
 
-			if (cost > 1 && obj->weatherId == SokuLib::WEATHER_CLOUDY)
-				cost--;
-			if (cost > obj->handInfo.hand.size())
-				return false;
-		} else if (obj->handInfo.hand.empty() && atk->cost)
-			return false;
+		//	if (cost > 1 && obj->weatherId == SokuLib::WEATHER_CLOUDY)
+		//		cost--;
+		//	if (cost > obj->handInfo.hand.size())
+		//		return false;
+		//} else if (obj->handInfo.hand.empty() && atk->cost)
+		//	return false;
 		chr = *atk;
 		chr.currentStance = stance;
 		obj->renderInfos.yRotation -= 10;
@@ -1203,6 +1213,8 @@ bool initAttack(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &ch
 
 void assisterAttacks(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &chr, ChrData &data)
 {
+	if (SokuLib::getBattleMgr().matchState == 1)
+		return;
 	if (chr.cd || obj->renderInfos.yRotation != 90)
 		return;
 	if (main->frameState.actionId >= SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN && main->frameState.actionId <= SokuLib::ACTION_NEUTRAL_TECH)
@@ -1218,13 +1230,17 @@ void assisterAttacks(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInf
 	if (data.hasStance)
 		for (auto &buttonName : buttons)
 			buttonName += std::to_string(chr.currentStance);
-	if (main->keyManager->keymapManager->input.verticalAxis < 0 && elems->find("5" + buttons[4]) != elems->end() && initAttack(main, obj, chr, (*elems)["5" + buttons[4]]))
+	// Spell
+	if (main->keyManager->keymapManager->input.verticalAxis > 0 && elems->find("5" + buttons[4]) != elems->end() && initAttack(main, obj, chr, (*elems)["5" + buttons[4]]))
 		return;
-	if (main->keyManager->keymapManager->input.verticalAxis > 0  && elems->find("8" + buttons[1]) != elems->end() && initAttack(main, obj, chr, (*elems)["8" + buttons[1]]))
-		return;
+	// Skill 1
 	if (main->keyManager->keymapManager->input.horizontalAxis * main->direction < 0 && elems->find("8" + buttons[0]) != elems->end() && initAttack(main, obj, chr, (*elems)["8" + buttons[0]]))
 		return;
+	// Skill 3
 	if (main->keyManager->keymapManager->input.horizontalAxis * main->direction > 0 && elems->find("8" + buttons[2]) != elems->end() && initAttack(main, obj, chr, (*elems)["8" + buttons[2]]))
+		return;
+	// Skill 2
+	if (main->keyManager->keymapManager->input.horizontalAxis == 0  && elems->find("8" + buttons[1]) != elems->end() && initAttack(main, obj, chr, (*elems)["8" + buttons[1]]))
 		return;
 }
 
@@ -2298,14 +2314,14 @@ void displayCard(SokuLib::v2::Player *mgr, unsigned shown, bool side, unsigned c
 			sidedSetPos(side, meterIndicator, 52 + j * 23, static_cast<int>(112 + 28 - meterIndicator.getSize().y));
 			meterIndicator.draw();
 		}
-		if (shown <= mgr->handInfo.hand.size()) {
+		/*if (shown <= mgr->handInfo.hand.size()) {
 			setRenderMode(2);
 			for (int j = 0; j < shown; j++) {
 				sidedSetPos(side, highlight[highlightAnimation[2]], 45 + j * 23, 93);
 				highlight[highlightAnimation[2]].draw();
 			}
 			setRenderMode(1);
-		}
+		}*/
 	} else for (int j = 0; j < 5; j++) {
 		sidedSetPos(side, cardHiddenSmall, 52 + j * 23, 112);
 		cardHiddenSmall.draw();
@@ -4590,13 +4606,16 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 			goto swap;
 		} else if (
 			keys &&
-			keys->keymapManager->input.select == 1 &&
-			keys->keymapManager->input.verticalAxis == 0 &&
-			keys->keymapManager->input.horizontalAxis == 0 &&
-			info.cd == 0
-			) {
+			(
+				keys->keymapManager->input.d && keys->keymapManager->input.d < 10 ||
+				keys->keymapManager->input.changeCard && keys->keymapManager->input.changeCard < 10
+			) &&
+			keys->keymapManager->input.select && keys->keymapManager->input.select < 10 &&
+			(info.cd == 0 || info.starting) &&
+			!info.tagging
+		) {
 			info.deathTag = false;
-			swap:
+		swap:
 			auto arr = *(SokuLib::v2::Player ***)(*(int *)SokuLib::ADDR_GAME_DATA_MANAGER + 0x40);
 			auto old = SokuLib::v2::GameDataManager::instance->players[i + 2];
 
