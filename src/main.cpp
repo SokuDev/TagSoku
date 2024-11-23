@@ -199,7 +199,6 @@ static int (SokuLib::SelectClient::*s_originalSelectClientOnRender)();
 static int (SokuLib::Select::*s_originalSelectOnProcess)();
 static int (SokuLib::Select::*s_originalSelectOnRender)();
 static int (SokuLib::Title::*s_originalTitleOnProcess)();
-static int (SokuLib::BattleManager::*s_originalBattleMgrOnProcess)();
 static void (SokuLib::BattleManager::*s_originalBattleMgrOnRender)();
 static int (SokuLib::ProfileDeckEdit::*s_originalCProfileDeckEdit_OnProcess)();
 static int (SokuLib::ProfileDeckEdit::*s_originalCProfileDeckEdit_OnRender)();
@@ -381,6 +380,7 @@ static std::pair<SokuLib::Character, SokuLib::Character> generatedC = {SokuLib::
 static SokuLib::DrawUtils::RectangleShape rectangle;
 static bool spawned = false;
 static bool init = false;
+static bool kill = false;
 static bool disp = false;
 static bool disp2 = false;
 static bool disp3 = false;
@@ -4638,8 +4638,85 @@ int (SokuLib::BattleManager::*og_battleMgrOnKO)();
 int (SokuLib::BattleManager::*og_battleMgrOnGirlsTalk)();
 int (SokuLib::BattleManager::*og_battleMgrUnknownFunction)();
 
-void battleCheckInit(SokuLib::BattleManager *This)
+void checkShock(SokuLib::v2::Player &chr, SokuLib::v2::Player &op, ChrInfo &info)
 {
+	auto FUN_00438ce0 = reinterpret_cast<void (__thiscall *)(SokuLib::CharacterManager &, unsigned, float, float, unsigned, unsigned)>(0x438ce0);
+
+	if (op.timeStop)
+		return;
+	if (chr.frameState.actionId < SokuLib::ACTION_5A)
+		return;
+	if (chr.frameState.actionId == SokuLib::ACTION_SYSTEM_CARD && chr.timeStop)
+		return;
+	if (!chr.keyManager)
+		return;
+	if (chr.keyManager->keymapManager->input.select != 1)
+		return;
+	if (chr.maxSpirit == 0)
+		return;
+	if (
+		chr.frameState.actionId == SokuLib::ACTION_66A &&
+		chr.frameState.sequenceId == 0 &&
+		chr.frameState.currentFrame < 4 &&
+		chr.inputData.keyInput.d >= chr.inputData.keyInput.a
+	)
+		return;
+	if (SokuLib::activeWeather != SokuLib::WEATHER_SUNNY) {
+		chr.currentSpirit = chr.maxSpirit - 200;
+		if (info.meter >= ASSIST_CARD_METER)
+			info.meter -= ASSIST_CARD_METER;
+		else
+			chr.maxSpirit -= 200;
+		chr.timeWithBrokenOrb = 0;
+	}
+	if (chr.currentSpirit < 200)
+		chr.currentSpirit = 0;
+	else
+		chr.currentSpirit -= 200;
+	if (chr.position.y == 0) {
+		chr.setAction(SokuLib::ACTION_SYSTEM_CARD);
+		chr.timeStop = 65;
+		chr.grabInvulTimer = 60;
+		chr.meleeInvulTimer = 60;
+		chr.projectileInvulTimer = 60;
+		SokuLib::playSEWaveBuffer(23);
+		chr.createEffect(115, chr.position.x, chr.position.y + 120, 1, 1);
+	} else {
+		chr.setAction(SokuLib::ACTION_FALLING);
+		chr.timeStop += 5;
+		chr.hitStop += 5;
+		chr.createEffect(69, chr.position.x, chr.position.y + 120, 1, 1);
+	}
+	chr.speed = {0, 0};
+	chr.gravity = {0, 0};
+	chr.renderInfos.scale = {1, 1};
+	chr.renderInfos.xRotation = 0;
+	chr.renderInfos.yRotation = 0;
+	chr.renderInfos.zRotation = 0;
+	chr.comboModifiers.chainArt = true;
+	chr.comboModifiers.chainSpell = true;
+	chr.dashTimer = 0;
+	SokuLib::camera.forceYCenter = false;
+	SokuLib::camera.forceXCenter = false;
+	SokuLib::camera.forceScale = false;
+	if (op.frameState.actionId >= SokuLib::ACTION_GRABBED && op.frameState.actionId < 120) {
+		op.gravity = {0, 0};
+		if (op.position.y != 0) {
+			op.setAction(SokuLib::ACTION_AIR_CRUSHED);
+			op.gravity.y = 0.5;
+		} else if (op.HP == 0) {
+			op.setAction(SokuLib::ACTION_KNOCKED_DOWN);
+			op.hitStop = 0;
+		} else
+			op.setAction(SokuLib::ACTION_GROUND_CRUSHED);
+		if (op.hitStop > 15)
+			op.hitStop = 15;
+		op.speed = {0, 0};
+		op.renderInfos.scale = {1, 1};
+		op.renderInfos.xRotation = 0;
+		op.renderInfos.yRotation = 0;
+		op.renderInfos.zRotation = 0;
+	}
 }
 
 void battleProcessCommon(SokuLib::BattleManager *This)
@@ -4648,6 +4725,8 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 
 	if (This->matchState == -1)
 		return;
+	if (SokuLib::checkKeyOneshot(DIK_F8, false, false, false))
+		kill = !kill;
 	if (SokuLib::checkKeyOneshot(DIK_F4, false, false, false))
 		disp = !disp;
 	if (SokuLib::checkKeyOneshot(DIK_F3, false, false, false))
@@ -4658,6 +4737,15 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 	if (This->matchState <= 2 || This->matchState == 4) {
 		int i = 0;
 
+		if (SokuLib::mainMode == SokuLib::BATTLE_MODE_PRACTICE && This->matchState == 2) {
+			if (kill) {
+				SokuLib::v2::GameDataManager::instance->players[2]->HP = 0;
+				SokuLib::v2::GameDataManager::instance->players[3]->HP = 0;
+			} else {
+				SokuLib::v2::GameDataManager::instance->players[2]->HP = SokuLib::v2::GameDataManager::instance->players[2]->MaxHP;
+				SokuLib::v2::GameDataManager::instance->players[3]->HP = SokuLib::v2::GameDataManager::instance->players[3]->MaxHP;
+			}
+		}
 		SokuLib::camera.p1X = &SokuLib::v2::GameDataManager::instance->players[0]->position.x;
 		SokuLib::camera.p2X = &SokuLib::v2::GameDataManager::instance->players[0]->position.x;
 		SokuLib::camera.p1Y = &SokuLib::v2::GameDataManager::instance->players[0]->position.y;
@@ -4684,7 +4772,28 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 		auto &info = (&currentChr.first)[i];
 		auto keys = SokuLib::v2::GameDataManager::instance->players[i]->keyManager;
 
-		if (SokuLib::v2::GameDataManager::instance->players[i]->HP == 0 && This->matchState <= 2) {
+		if (SokuLib::v2::GameDataManager::instance->players[i + 2]->HP == 0) {
+			auto mate = SokuLib::v2::GameDataManager::instance->players[i + 2];
+
+			if (info.maxCd == 0)
+				info.maxCd = 10;
+			info.cd = info.maxCd;
+			mate->untech = 60;
+			mate->renderInfos.yRotation = 0;
+			if (
+				mate->frameState.actionId < SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN ||
+				mate->frameState.actionId >= SokuLib::ACTION_RIGHTBLOCK_HIGH_SMALL_BLOCKSTUN
+			) {
+				mate->speed.y = 15;
+				mate->gravity.y = 1;
+				mate->setAction(SokuLib::ACTION_AIR_HIT_MEDIUM_HITSTUN);
+			}
+			checkShock(
+				*SokuLib::v2::GameDataManager::instance->players[i],
+				*SokuLib::v2::GameDataManager::instance->players[!i],
+				info
+			);
+		} else if (SokuLib::v2::GameDataManager::instance->players[i]->HP == 0 && This->matchState <= 2) {
 			info.deathTag = true;
 			goto swap;
 		} else if (
@@ -4827,11 +4936,6 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 	players[3]->score = max(players[1]->score, players[3]->score);
 }
 
-int __fastcall CBattleManager_OnProcess(SokuLib::BattleManager *This)
-{
-	battleCheckInit(This);
-	return (This->*s_originalBattleMgrOnProcess)();
-}
 int __fastcall CBattleManager_OnSayStart(SokuLib::BattleManager *This)
 {
 	battleProcessCommon(This);
@@ -5379,7 +5483,6 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	loadSoku2Config();
 	::VirtualProtect((PVOID)RDATA_SECTION_OFFSET, RDATA_SECTION_SIZE, PAGE_EXECUTE_WRITECOPY, &old);
 	s_originalBattleMgrOnRender          = SokuLib::TamperDword(&SokuLib::VTable_BattleManager.onRender, CBattleManager_OnRender);
-	s_originalBattleMgrOnProcess         = SokuLib::TamperDword(&SokuLib::VTable_BattleManager.onProcess, CBattleManager_OnProcess);
 	og_battleMgrOnSayStart               = SokuLib::TamperDword(&SokuLib::VTable_BattleManager.onSayStart, CBattleManager_OnSayStart);
 	og_battleMgrAfterBlackScreen         = SokuLib::TamperDword(&SokuLib::VTable_BattleManager.afterBlackScreen, CBattleManager_AfterBlackScreen);
 	og_battleMgrMaybeOnProgress          = SokuLib::TamperDword(&SokuLib::VTable_BattleManager.maybeOnProgress, CBattleManager_MaybeOnProgress);
