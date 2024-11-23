@@ -1,5 +1,5 @@
 //
-// Created by Gegel85 on 31/10/2020
+// Created by PinkySmile on 31/10/2020
 //
 
 #define _USE_MATH_DEFINES 1
@@ -17,9 +17,12 @@
 #define printf(...)
 #endif
 
+#define TAG_CALL_METER 20
+#define ASSIST_CALL_METER 200
+#define ASSIST_CARD_METER 1000
 #define TAG_CD 600
+#define SLOW_TAG_CD 3600
 #define SLOW_TAG_STARTUP 60
-#define DEFENSE_ASSIST_STARTUP 20
 #define FONT_HEIGHT 16
 #define TEXTURE_SIZE 0x200
 #define BOXES_ALPHA 0.25
@@ -297,6 +300,7 @@ struct ChrInfo {
 	unsigned startTimer = 0;
 	unsigned loadoutIndex = 0;
 	unsigned currentStance = 0;
+	unsigned meter = 0;
 	SokuLib::Action end;
 	SokuLib::Action action;
 	SokuLib::Character chr;
@@ -311,6 +315,52 @@ struct ChrInfo {
 	SokuLib::Vector2<std::optional<int>> offset;
 	SokuLib::Vector2<std::optional<int>> gravity;
 	bool (*cond)(SokuLib::v2::Player *mgr, ChrInfo &This) = nullptr;
+
+	ChrInfo &operator=(const ChrInfo &other) {
+		this->blockedByWall = other.blockedByWall;
+		this->canControl = other.canControl;
+		this->gotHit = other.gotHit;
+		this->started = other.started;
+		this->starting = other.starting;
+		this->tagging = other.tagging;
+		this->deathTag = other.deathTag;
+		this->slowTag = other.slowTag;
+		this->ending = other.ending;
+		this->ended = other.ended;
+		this->callInit = other.callInit;
+		this->startup = other.startup;
+		this->cutscene = other.cutscene;
+		this->tagTimer = other.tagTimer;
+		this->nb = other.nb;
+		this->cd = other.cd;
+		this->ctr = other.ctr;
+		this->cost = other.cost;
+		this->maxCd = other.maxCd;
+		this->stance = other.stance;
+		this->cardName = other.cardName;
+		this->recovery = other.recovery;
+		this->startMin = other.startMin;
+		this->startMax = other.startMax;
+		this->stanceCtr = other.stanceCtr;
+		this->startTimer = other.startTimer;
+		this->loadoutIndex = other.loadoutIndex;
+		this->currentStance = other.currentStance;
+		this->end = other.end;
+		this->action = other.action;
+		this->chr = other.chr;
+		this->startKeys = other.startKeys;
+		this->allowedKeys = other.allowedKeys;
+		this->releasedKeys = other.releasedKeys;
+		this->collisionLimit = other.collisionLimit;
+		this->startAction = other.startAction;
+		this->resetValues = other.resetValues;
+		this->pos = other.pos;
+		this->speed = other.speed;
+		this->offset = other.offset;
+		this->gravity = other.gravity;
+		this->cond = other.cond;
+		return *this;
+	}
 };
 
 struct ChrData {
@@ -364,6 +414,7 @@ static SokuLib::DrawUtils::Sprite yesSelectedSprite;
 static SokuLib::DrawUtils::Sprite cardHolder;
 static SokuLib::DrawUtils::Sprite meterIndicator;
 static SokuLib::DrawUtils::Sprite cardHiddenSmall;
+static SokuLib::DrawUtils::Sprite cardBlank[5];
 static SokuLib::DrawUtils::Sprite highlight[20];
 static SokuLib::DrawUtils::Sprite bigHighlight[20];
 static unsigned highlightAnimation[4] = {0, 0, 0, 0};
@@ -712,6 +763,10 @@ static void loadCardAssets()
 	loadTexture(cardHolder,            "data/battle/cardGaugeSmallB.bmp");
 	loadTexture(meterIndicator,        "data/battle/cardBarSmallB.bmp");
 	loadTexture(cardHiddenSmall,       "data/battle/cardFaceDownSmall.bmp");
+	for (int i = 0; i < 5; i++) {
+		sprintf(buffer, "data/infoeffect/blank_%icost.bmp", i + 1);
+		loadTexture(cardBlank[i], buffer);
+	}
 	for (int i = 0; i < 20; i++) {
 		sprintf(buffer, "data/infoeffect/cardMax%03i.bmp", i);
 		loadTexture(bigHighlight[i], buffer);
@@ -855,6 +910,12 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 		//mgr->handInfo.cardCount++;
 		//mgr->consumeCard(mgr->handInfo.cardCount - 1, 1, 60);
 		//forceCardCost = false;
+		if (mgr->weatherId == SokuLib::WEATHER_MOUNTAIN_VAPOR && chr.meter < chr.cost * ASSIST_CARD_METER)
+			chr.meter = 0;
+		else if (mgr->weatherId == SokuLib::WEATHER_CLOUDY)
+			chr.meter -= max(1, chr.cost - 1) * ASSIST_CARD_METER;
+		else
+			chr.meter -= chr.cost * ASSIST_CARD_METER;
 		*(int *)0x8985E8 = oldHud;
 		chr.cost = 0;
 		chr.cardName = 0;
@@ -873,13 +934,17 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 			mgr->setAction(SokuLib::ACTION_IDLE);
 		if (SokuLib::mainMode == SokuLib::BATTLE_MODE_PRACTICE)
 			chr.cd = 0;
-		for (int i = 0; i < 2; i++) {
-			if (chr.cost && i)
-				continue;
-			chr.cd -= !!chr.cd;
-			if (main->weatherId == SokuLib::WEATHER_TWILIGHT)
-				chr.cd -= !!chr.cd;
-		}
+
+		int mul = 2;
+
+		if (chr.cost)
+			mul *= 2;
+		if (main->weatherId == SokuLib::WEATHER_TWILIGHT)
+			mul *= 2;
+		if (chr.cd < mul)
+			chr.cd = 0;
+		else
+			chr.cd -= mul;
 		if (mgr->frameState.actionId < SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN)
 			mgr->position = main->position;
 		if (loadedData[chr.chr][chr.loadoutIndex].canFly) {
@@ -890,6 +955,7 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 		}
 		mgr->spiritRegenDelay = 0;
 		mgr->currentSpirit = mgr->maxSpirit;
+		mgr->speed = {0, 0};
 	} else if (chr.nb != 0 && mgr->renderInfos.yRotation != 0) {
 		mgr->renderInfos.yRotation -= 10;
 		if (chr.speed.x)
@@ -913,8 +979,6 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 		mgr->frameState.actionId != SokuLib::ACTION_KNOCKED_DOWN_STATIC
 	) {
 		if (!chr.gotHit) {
-			chr.cd += 600;
-			chr.maxCd += 600;
 			chr.nb = 0;
 			chr.started = true;
 			chr.starting = false;
@@ -1102,7 +1166,6 @@ static void initSkillUpgrade(ChrInfo &chr, SokuLib::Character character, SokuLib
 
 static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2::Player &mgr, SokuLib::v2::Player &main, unsigned index)
 {
-	chr.action = SokuLib::ACTION_SKILL_CARD;
 	chr.chr = character;
 	chr.end = SokuLib::ACTION_IDLE;
 	chr.loadoutIndex = index;
@@ -1110,8 +1173,9 @@ static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2:
 	chr.resetValues.clear();
 	chr.speed.x = 0;
 	chr.speed.y = 0;
+	mgr.speed.x = 0;
+	mgr.speed.y = 0;
 	chr.pos.x.reset();
-	chr.pos.y.reset();
 	chr.offset.x.reset();
 	chr.offset.y.reset();
 	chr.gravity.x.reset();
@@ -1126,22 +1190,28 @@ static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2:
 	chr.slowTag = false;
 	chr.cutscene = 2;
 	chr.nb = 1;
-	chr.cd = TAG_CD;
-	chr.maxCd = TAG_CD;
 	forceCardCost = true;
 	chr.ctr = 0;
 	chr.cost = 0;
 	chr.tagTimer = 0;
-	chr.collisionLimit.reset();
 	chr.recovery = 0;
 	chr.startMin = 0;
 	chr.startMax = 0;
 	chr.startTimer = 0;
 	chr.cond = waitIdle;
+	chr.action = SokuLib::ACTION_SKILL_CARD;
 	if (main.frameState.actionId >= SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN && main.frameState.actionId <= SokuLib::ACTION_NEUTRAL_TECH) {
 		chr.recovery = 30;
 		chr.slowTag = true;
+		mgr.setAction(SokuLib::ACTION_BOMB);
+		mgr.position.y = 0;
+		chr.cd = SLOW_TAG_CD;
+		chr.maxCd = SLOW_TAG_CD;
+	} else {
+		chr.cd = TAG_CD;
+		chr.maxCd = TAG_CD;
 	}
+	chr.meter += TAG_CALL_METER;
 }
 
 bool initAttack(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &chr, std::pair<std::optional<ChrInfo>, std::optional<ChrInfo>> &data)
@@ -1151,16 +1221,16 @@ bool initAttack(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &ch
 	if (atk) {
 		unsigned stance = chr.currentStance;
 
-		//if (atk->cost == 0);
-		//else if (obj->weatherId != SokuLib::WEATHER_MOUNTAIN_VAPOR) {
-		//	unsigned cost = atk->cost;
+		if (atk->cost == 0);
+		else if (obj->weatherId != SokuLib::WEATHER_MOUNTAIN_VAPOR) {
+			unsigned cost = atk->cost;
 
-		//	if (cost > 1 && obj->weatherId == SokuLib::WEATHER_CLOUDY)
-		//		cost--;
-		//	if (cost > obj->handInfo.hand.size())
-		//		return false;
-		//} else if (obj->handInfo.hand.empty() && atk->cost)
-		//	return false;
+			if (cost > 1 && obj->weatherId == SokuLib::WEATHER_CLOUDY)
+				cost--;
+			if (cost * ASSIST_CARD_METER > chr.meter)
+				return false;
+		} else if (chr.meter < ASSIST_CARD_METER && atk->cost)
+			return false;
 		chr = *atk;
 		chr.currentStance = stance;
 		obj->renderInfos.yRotation -= 10;
@@ -1203,10 +1273,7 @@ bool initAttack(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &ch
 		chr.started = false;
 		chr.ended = false;
 		chr.callInit = true;
-		chr.startup += (
-			main->frameState.actionId >= SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN &&
-			main->frameState.actionId <= SokuLib::ACTION_NEUTRAL_TECH
-		) * DEFENSE_ASSIST_STARTUP;
+		chr.meter += ASSIST_CALL_METER;
 	}
 	return static_cast<bool>(atk);
 }
@@ -1221,7 +1288,7 @@ void assisterAttacks(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInf
 		return;
 	if (!main->keyManager)
 		return;
-	if (main->keyManager->keymapManager->input.select != 1)
+	if (main->keyManager->keymapManager->input.select == 0 || main->keyManager->keymapManager->input.select > 2)
 		return;
 
 	std::string buttons[] = {"a", "b", "c", "d", "s"};
@@ -1231,17 +1298,29 @@ void assisterAttacks(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInf
 		for (auto &buttonName : buttons)
 			buttonName += std::to_string(chr.currentStance);
 	// Spell
-	if (main->keyManager->keymapManager->input.verticalAxis > 0 && elems->find("5" + buttons[4]) != elems->end() && initAttack(main, obj, chr, (*elems)["5" + buttons[4]]))
+	if (main->keyManager->keymapManager->input.verticalAxis > 0) {
+		if (elems->find("5" + buttons[4]) != elems->end())
+			initAttack(main, obj, chr, (*elems)["5" + buttons[4]]);
 		return;
+	}
 	// Skill 1
-	if (main->keyManager->keymapManager->input.horizontalAxis * main->direction < 0 && elems->find("8" + buttons[0]) != elems->end() && initAttack(main, obj, chr, (*elems)["8" + buttons[0]]))
+	if (main->keyManager->keymapManager->input.horizontalAxis * main->direction < 0) {
+		if (elems->find("8" + buttons[0]) != elems->end())
+			initAttack(main, obj, chr, (*elems)["8" + buttons[0]]);
 		return;
-	// Skill 3
-	if (main->keyManager->keymapManager->input.horizontalAxis * main->direction > 0 && elems->find("8" + buttons[2]) != elems->end() && initAttack(main, obj, chr, (*elems)["8" + buttons[2]]))
-		return;
+	}
 	// Skill 2
-	if (main->keyManager->keymapManager->input.horizontalAxis == 0  && elems->find("8" + buttons[1]) != elems->end() && initAttack(main, obj, chr, (*elems)["8" + buttons[1]]))
+	if (main->keyManager->keymapManager->input.horizontalAxis == 0) {
+		if (elems->find("8" + buttons[1]) != elems->end())
+			initAttack(main, obj, chr, (*elems)["8" + buttons[1]]);
 		return;
+	}
+	// Skill 3
+	if (main->keyManager->keymapManager->input.horizontalAxis * main->direction > 0) {
+		if (elems->find("8" + buttons[2]) != elems->end())
+			initAttack(main, obj, chr, (*elems)["8" + buttons[2]]);
+		return;
+	}
 }
 
 unsigned short getRandomCard(const std::vector<unsigned short> &list, const std::map<unsigned short, unsigned char> &other)
@@ -2284,7 +2363,7 @@ void restoreHudRender(CInfoManager *hud, UnderObjects *p1)
 
 #define sidedSetPos(side, t, xpos, ypos) (t).setPosition({(side) ? 640 - (xpos) - (int)(t).getSize().x : (xpos), ypos})
 
-void displayCard(SokuLib::v2::Player *mgr, unsigned shown, bool side, unsigned cardId)
+void displayCard(SokuLib::v2::Player *mgr, unsigned shown, unsigned meter, bool side, unsigned cardId)
 {
 	shown -= mgr->weatherId == SokuLib::WEATHER_CLOUDY;
 	for (int j = 0; j < min(5, mgr->deckInfo.queue.size()); j++) {
@@ -2293,35 +2372,32 @@ void displayCard(SokuLib::v2::Player *mgr, unsigned shown, bool side, unsigned c
 	}
 	if (mgr->weatherId != SokuLib::WEATHER_MOUNTAIN_VAPOR) {
 		int j = 0;
-		float ratio = mgr->handInfo.cardGauge / 500.f;
+		float ratio = (meter % ASSIST_CARD_METER) / (float)ASSIST_CARD_METER;
 
-		while (j < mgr->handInfo.hand.size()) {
-			auto id = mgr->handInfo.hand[j].id;
-			auto chr = id < 100 ? SokuLib::CHARACTER_RANDOM : mgr->characterIndex;
-			auto &texture = cardsTextures[chr][id];
+		while (j < meter / ASSIST_CARD_METER && j < 5) {
+			auto &texture = cardBlank[j];
 
 			texture.setSize({18, 28});
-			texture.setRotation(0);
 			sidedSetPos(side, texture, 52 + j * 23, 112);
 			texture.tint = SokuLib::Color::White;
 			texture.draw();
 			j++;
 		}
-		if (mgr->handInfo.cardGauge) {
+		if (meter % ASSIST_CARD_METER) {
 			meterIndicator.rect.height = meterIndicator.texture.getSize().y * ratio;
 			meterIndicator.rect.top = meterIndicator.texture.getSize().y - meterIndicator.rect.height;
 			meterIndicator.setSize({18, static_cast<unsigned int>(28 * ratio)});
 			sidedSetPos(side, meterIndicator, 52 + j * 23, static_cast<int>(112 + 28 - meterIndicator.getSize().y));
 			meterIndicator.draw();
 		}
-		/*if (shown <= mgr->handInfo.hand.size()) {
+		if (shown * ASSIST_CARD_METER <= meter) {
 			setRenderMode(2);
-			for (int j = 0; j < shown; j++) {
-				sidedSetPos(side, highlight[highlightAnimation[2]], 45 + j * 23, 93);
+			for (int k = 0; k < shown; k++) {
+				sidedSetPos(side, highlight[highlightAnimation[2]], 45 + k * 23, 93);
 				highlight[highlightAnimation[2]].draw();
 			}
 			setRenderMode(1);
-		}*/
+		}
 	} else for (int j = 0; j < 5; j++) {
 		sidedSetPos(side, cardHiddenSmall, 52 + j * 23, 112);
 		cardHiddenSmall.draw();
@@ -2415,8 +2491,8 @@ int __fastcall onHudRender(CInfoManager *This)
 	auto &leftData = loadedData[currentChr.first.chr][currentChr.first.loadoutIndex];
 	auto &rightData = loadedData[currentChr.second.chr][currentChr.second.loadoutIndex];
 
-	displayCard(SokuLib::v2::GameDataManager::instance->players[2], leftData.shownCost, false, leftData.spells.front());
-	displayCard(SokuLib::v2::GameDataManager::instance->players[3], rightData.shownCost, true, rightData.spells.front());
+	displayCard(SokuLib::v2::GameDataManager::instance->players[2], leftData.shownCost, currentChr.first.meter, false, leftData.spells.front());
+	displayCard(SokuLib::v2::GameDataManager::instance->players[3], rightData.shownCost, currentChr.second.meter, true, rightData.spells.front());
 	return ret;
 }
 
@@ -4114,10 +4190,7 @@ bool initStartingKeys(SokuLib::v2::Player * const assist)
 		}
 		return true;
 	}
-	if (assist->keyManager->keymapManager->input.changeCard)
-		assist->inputData.keyInput.changeCard++;
-	else
-		assist->inputData.keyInput.changeCard = 0;
+	assist->inputData.keyInput.changeCard = 0;
 	if (assist->renderInfos.yRotation == 90) {
 		if (!loadedData[chr.chr][chr.loadoutIndex].canFly) {
 			assist->inputData.keyInput.horizontalAxis = 0;
@@ -4446,24 +4519,28 @@ struct GiurollCallbacks {
 class SavedFrame {
 private:
 	std::pair<ChrInfo, ChrInfo> _currentChr;
-	SokuLib::v2::Player *players[4];
+	unsigned _tagInvul;
+	SokuLib::v2::Player *_players[4];
 
 public:
 	SavedFrame() :
-		_currentChr(currentChr)
+		_currentChr(currentChr),
+		_tagInvul(tagInvul)
 	{
-		memcpy(this->players, SokuLib::v2::GameDataManager::instance->players, sizeof(this->players));
+		this->_currentChr.first.meter = currentChr.first.meter;
+		this->_currentChr.second.meter = currentChr.second.meter;
+		memcpy(this->_players, SokuLib::v2::GameDataManager::instance->players, sizeof(this->_players));
 	}
 
 	void restorePre()
 	{
 		auto players = (SokuLib::v2::Player**)((int)&SokuLib::getBattleMgr() + 0xC);
 
-		memcpy(SokuLib::v2::GameDataManager::instance->players, this->players, sizeof(this->players));
+		memcpy(SokuLib::v2::GameDataManager::instance->players, this->_players, sizeof(this->_players));
 		for (int i = 0; i < 4; i++)
-			players[i] = this->players[i];
+			players[i] = this->_players[i];
 		for (int i = 0; i < 4; i++)
-			SokuLib::v2::GameDataManager::instance->activePlayers[i] = this->players[i];
+			SokuLib::v2::GameDataManager::instance->activePlayers[i] = this->_players[i];
 		players[0]->gameData.opponent = players[1];
 		players[1]->gameData.opponent = players[0];
 		players[0]->gameData.ally = players[0];
@@ -4478,7 +4555,10 @@ public:
 
 	void restorePost()
 	{
+		tagInvul = this->_tagInvul;
 		currentChr = this->_currentChr;
+		currentChr.first.meter = this->_currentChr.first.meter;
+		currentChr.second.meter = this->_currentChr.second.meter;
 	}
 };
 
@@ -4601,7 +4681,6 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 		auto keys = SokuLib::v2::GameDataManager::instance->players[i]->keyManager;
 
 		if (SokuLib::v2::GameDataManager::instance->players[i]->HP == 0 && This->matchState <= 2) {
-			SokuLib::playSEWaveBuffer(44);
 			info.deathTag = true;
 			goto swap;
 		} else if (
@@ -4627,6 +4706,7 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 			SokuLib::v2::GameDataManager::instance->activePlayers[i] = old;
 			info.tagging = true;
 			SokuLib::v2::GameDataManager::instance->players[i]->gameData.ally = SokuLib::v2::GameDataManager::instance->players[i];
+			SokuLib::v2::GameDataManager::instance->players[i + 2]->gameData.ally = SokuLib::v2::GameDataManager::instance->players[i];
 			SokuLib::v2::GameDataManager::instance->players[i]->comboDamage = SokuLib::v2::GameDataManager::instance->players[i + 2]->comboDamage;
 			SokuLib::v2::GameDataManager::instance->players[i]->comboLimit = SokuLib::v2::GameDataManager::instance->players[i + 2]->comboLimit;
 			SokuLib::v2::GameDataManager::instance->players[i]->comboRate = SokuLib::v2::GameDataManager::instance->players[i + 2]->comboRate;
@@ -4666,14 +4746,15 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 		}
 	}
 	for (int i = 2; i < 4; i++) {
-		auto &elems = loadedData[(&currentChr.first)[i - 2].chr][(&currentChr.first)[i - 2].loadoutIndex];
+		auto &info = (&currentChr.first)[i - 2];
+		auto &elems = loadedData[(&currentChr.first)[i - 2].chr][info.loadoutIndex];
 		auto cost = elems.shownCost;
 
 		if (players[i]->weatherId == SokuLib::WEATHER_CLOUDY)
 			cost--;
 		if (cost < 1)
 			cost = 1;
-		if (SokuLib::v2::GameDataManager::instance->players[i]->handInfo.hand.size() >= cost) {
+		if (info.meter >= cost * ASSIST_CARD_METER) {
 			highlightAnimation[i]++;
 			highlightAnimation[i] %= 20;
 		}
@@ -4809,9 +4890,11 @@ void *onLoadingDone()
 		loadAssistData(chr.character, i + 2);
 	}
 	currentChr.first = ChrInfo();
+	currentChr.first.meter = 0;
 	currentChr.first.loadoutIndex = loadouts[2];
 	currentChr.first.chr = assists.first.character;
 	currentChr.second = ChrInfo();
+	currentChr.second.meter = 0;
 	currentChr.second.loadoutIndex = loadouts[3];
 	currentChr.second.chr = assists.second.character;
 
@@ -5114,36 +5197,51 @@ int __stdcall my_recvfrom(SOCKET s, char * buf, int len, int flags, sockaddr * f
 	int ret = og_recvfrom(s, buf, len, flags, from, fromlen);
 	auto packet = (SokuLib::Packet *)buf;
 
+	mutex.lock();
+	std::cout << "RECV: ";
+	mutex.unlock();
 	switch (packet->type) {
 	case SokuLib::CLIENT_GAME:
 	case SokuLib::HOST_GAME:
+		mutex.lock();
+		std::cout << "type: " << SokuLib::PacketTypeToString(packet->type);
+		mutex.unlock();
 		switch (packet->game.event.type) {
-		case SokuLib::GAME_MATCH:
-			auto packet_ = (PacketGameMatchEvent *)buf;
+		case SokuLib::GAME_MATCH: {
+			auto packet_ = (PacketGameMatchEvent *) buf;
 
 			mutex.lock();
-			if (packet->type == SokuLib::HOST_GAME)
-				std::cout << "[HOST]";
-			else
-				std::cout << "[CLIENT]";
-			std::cout << "[recv] p1: " << (*packet_)[0] << std::endl;
-			std::cout << "       p2: " << (*packet_)[1] << std::endl;
-			std::cout << "       p3: " << (*packet_)[2] << std::endl;
-			std::cout << "       p4: " << (*packet_)[3] << std::endl;
-			std::cout << "       loadouts: [";
-			std::cout << (int)(*packet_).loadouts(0) << ", ";
-			std::cout << (int)(*packet_).loadouts(1) << ", ";
-			std::cout << (int)(*packet_).loadouts(2) << ", ";
-			std::cout << (int)(*packet_).loadouts(1) << "]";
-			std::cout << ", stageId: " << (int)(*packet_).stageId();
-			std::cout << ", musicId: " << (int)(*packet_).musicId();
+			std::cout << " p1: " << (*packet_)[0] << std::endl;
+			std::cout << " p2: " << (*packet_)[1] << std::endl;
+			std::cout << " p3: " << (*packet_)[2] << std::endl;
+			std::cout << " p4: " << (*packet_)[3] << std::endl;
+			std::cout << " loadouts: [";
+			std::cout << (int) (*packet_).loadouts(0) << ", ";
+			std::cout << (int) (*packet_).loadouts(1) << ", ";
+			std::cout << (int) (*packet_).loadouts(2) << ", ";
+			std::cout << (int) (*packet_).loadouts(1) << "]";
+			std::cout << ", stageId: " << (int) (*packet_).stageId();
+			std::cout << ", musicId: " << (int) (*packet_).musicId();
 			std::cout << ", randomSeed: " << (*packet_).randomSeed();
-			std::cout << ", matchId: " << (int)(*packet_).matchId() << std::endl;
+			std::cout << ", matchId: " << (int) (*packet_).matchId();
+			mutex.unlock();
+			break;
+		}
+		default:
+			mutex.lock();
+			displayGameEvent(std::cout, packet->game.event);
 			mutex.unlock();
 			break;
 		}
 		break;
+	default:
+		mutex.lock();
+		SokuLib::displayPacketContent(std::cout, *packet);
+		mutex.unlock();
 	}
+	mutex.lock();
+	std::cout << std::endl;
+	mutex.unlock();
 	if (SokuLib::mainMode != SokuLib::BATTLE_MODE_VSSERVER)
 		return ret;
 	if (packet->type != SokuLib::CLIENT_GAME && packet->type != SokuLib::HOST_GAME)
@@ -5162,42 +5260,98 @@ int __stdcall my_sendto(SOCKET s, char * buf, int len, int flags, sockaddr * to,
 {
 	auto packet = (SokuLib::Packet *)buf;
 
+	mutex.lock();
+	std::cout << "SEND: ";
+	mutex.unlock();
 	switch (packet->type) {
 	case SokuLib::HOST_GAME:
 	case SokuLib::CLIENT_GAME:
 		switch (packet->game.event.type) {
-		case SokuLib::GAME_MATCH:
-			auto packet_ = (PacketGameMatchEvent *)buf;
+		case SokuLib::GAME_MATCH: {
+			auto packet_ = (PacketGameMatchEvent *) buf;
 
 			mutex.lock();
-			if (packet->type == SokuLib::HOST_GAME)
-				std::cout << "[HOST]";
-			else
-				std::cout << "[CLIENT]";
-			std::cout << "[send] p1: " << (*packet_)[0] << std::endl;
-			std::cout << "       p2: " << (*packet_)[1] << std::endl;
-			std::cout << "       p3: " << (*packet_)[2] << std::endl;
-			std::cout << "       p4: " << (*packet_)[3] << std::endl;
-			std::cout << "       loadouts: [";
-			std::cout << (int)(*packet_).loadouts(0) << ", ";
-			std::cout << (int)(*packet_).loadouts(1) << ", ";
-			std::cout << (int)(*packet_).loadouts(2) << ", ";
-			std::cout << (int)(*packet_).loadouts(1) << "]";
-			std::cout << ", stageId: " << (int)(*packet_).stageId();
-			std::cout << ", musicId: " << (int)(*packet_).musicId();
+			std::cout << " p1: " << (*packet_)[0] << std::endl;
+			std::cout << " p2: " << (*packet_)[1] << std::endl;
+			std::cout << " p3: " << (*packet_)[2] << std::endl;
+			std::cout << " p4: " << (*packet_)[3] << std::endl;
+			std::cout << " loadouts: [";
+			std::cout << (int) (*packet_).loadouts(0) << ", ";
+			std::cout << (int) (*packet_).loadouts(1) << ", ";
+			std::cout << (int) (*packet_).loadouts(2) << ", ";
+			std::cout << (int) (*packet_).loadouts(1) << "]";
+			std::cout << ", stageId: " << (int) (*packet_).stageId();
+			std::cout << ", musicId: " << (int) (*packet_).musicId();
 			std::cout << ", randomSeed: " << (*packet_).randomSeed();
-			std::cout << ", matchId: " << (int)(*packet_).matchId() << std::endl;
+			std::cout << ", matchId: " << (int) (*packet_).matchId();
+			mutex.unlock();
+			break;
+		}
+		default:
+			mutex.lock();
+			displayGameEvent(std::cout, packet->game.event);
 			mutex.unlock();
 			break;
 		}
 		break;
+	default:
+		mutex.lock();
+		SokuLib::displayPacketContent(std::cout, *packet);
+		mutex.unlock();
 	}
+	mutex.lock();
+	std::cout << std::endl;
+	mutex.unlock();
 	return og_sendto(s, buf, len, flags, to, tolen);
 }
 
 void generateClientDecks(SokuLib::NetObject &obj)
 {
 	obj.playerData[1].cards = netplayDeck.first;
+}
+
+void onMeterGained(SokuLib::v2::Player *player, int meter)
+{
+	auto &info = (&currentChr.first)[currentIndex(player)];
+
+	info.meter += meter;
+	if (info.meter > ASSIST_CARD_METER * 5)
+		info.meter = ASSIST_CARD_METER * 5;
+}
+
+void __declspec(naked) onMeterGained_hook()
+{
+	__asm {
+		MOV AL, [ECX + 0x14E]
+		CMP AL, 2
+		JL lower
+		MOV ESI, [ECX + 0x16C]
+	lower:
+		PUSH [ESP + 0xC]
+		PUSH ESI
+		CALL onMeterGained
+		ADD ESP, 8
+		FLD dword ptr [ESI + 0x54C]
+		RET
+	}
+}
+
+void __declspec(naked) onMeterGainedHit_hook()
+{
+	__asm {
+		MOV AL, [ECX + 0x14E]
+		CMP AL, 2
+		JL lower
+		MOV ECX, [ECX + 0x16C]
+	lower:
+		PUSH [ESP + 0x8]
+		PUSH ECX
+		CALL onMeterGained
+		POP ECX
+		ADD ESP, 4
+		CMP byte ptr [ECX + 0x7CC],0x2
+		RET
+	}
 }
 
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
@@ -5518,6 +5672,11 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	new SokuLib::Trampoline(0x428789, generateFakeDecks, 5);
 	new SokuLib::Trampoline(0x428521, generateFakeDecks, 5);
 
+	SokuLib::TamperNearCall(0x487873, onMeterGained_hook);
+	*(char *)0x487878 = 0x90;
+	SokuLib::TamperNearCall(0x468B00, onMeterGainedHit_hook);
+	*(char *)0x468B05 = 0x90;
+	*(char *)0x468B06 = 0x90;
 
 	og_loadDat = SokuLib::TamperNearJmpOpr(0x7fb85f, loadExtraDatFiles);
 
