@@ -921,6 +921,8 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 		chr.cardName = 0;
 	}
 	if (mgr->renderInfos.yRotation == 90) {
+		if (!mgr->keyManager)
+			mgr->setAction(SokuLib::ACTION_IDLE);
 		mgr->grabInvulTimer = 2;
 		mgr->meleeInvulTimer = 2;
 		mgr->projectileInvulTimer = 2;
@@ -932,8 +934,10 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 			mgr->frameState.actionId != SokuLib::ACTION_USING_SC_ID_214
 		)
 			mgr->setAction(SokuLib::ACTION_IDLE);
-		if (SokuLib::mainMode == SokuLib::BATTLE_MODE_PRACTICE)
+		if (SokuLib::mainMode == SokuLib::BATTLE_MODE_PRACTICE) {
 			chr.cd = 0;
+			chr.meter = loadedData[chr.chr][chr.loadoutIndex].shownCost * ASSIST_CARD_METER;
+		}
 
 		int mul = 2;
 
@@ -1180,6 +1184,7 @@ static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2:
 	chr.offset.y.reset();
 	chr.gravity.x.reset();
 	chr.gravity.y.reset();
+	memset(&chr.allowedKeys, 0, sizeof(chr.allowedKeys));
 	chr.blockedByWall = false;
 	chr.gotHit = false;
 	chr.started = false;
@@ -4196,8 +4201,8 @@ bool initStartingKeys(SokuLib::v2::Player * const assist)
 			assist->inputData.keyInput.horizontalAxis = 0;
 			assist->inputData.keyInput.verticalAxis = 0;
 			assist->inputData.keyInput.a = 0;
-			assist->inputData.keyInput.b = assist->keyManager->keymapManager->input.b && assist->inputData.keyInput.b ? assist->inputData.keyInput.b + 1 : 0;
-			assist->inputData.keyInput.c = assist->keyManager->keymapManager->input.c && assist->inputData.keyInput.c ? assist->inputData.keyInput.c + 1 : 0;
+			assist->inputData.keyInput.b = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.b ? assist->inputData.keyInput.b + 1 : 0;
+			assist->inputData.keyInput.c = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.c ? assist->inputData.keyInput.c + 1 : 0;
 			assist->inputData.keyInput.d = 0;
 			assist->inputData.keyInput.spellcard = 0;
 			return false;
@@ -4248,8 +4253,8 @@ bool initStartingKeys(SokuLib::v2::Player * const assist)
 			assist->inputData.keyInput.horizontalAxis = 0;
 			assist->inputData.keyInput.verticalAxis = 0;
 			assist->inputData.keyInput.a = 0;
-			assist->inputData.keyInput.b = 0;
-			assist->inputData.keyInput.c = 0;
+			assist->inputData.keyInput.b = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.b ? assist->inputData.keyInput.b + 1 : 0;
+			assist->inputData.keyInput.c = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.c ? assist->inputData.keyInput.c + 1 : 0;
 			assist->inputData.keyInput.d = 0;
 			assist->inputData.keyInput.spellcard = 0;
 			return false;
@@ -4284,9 +4289,10 @@ bool initStartingKeys(SokuLib::v2::Player * const assist)
 	} else if (chr.started) {
 		if (chr.canControl)
 			return true;
+
 		for (int i = 0; i < 8; i++) {
 			int &old = ((int *)&assist->inputData.keyInput)[i];
-			int actual = ((int *)&assist->keyManager->keymapManager->input)[i];
+			int actual = assist->keyManager->keymapManager->input.select;
 			int authorized = ((int *)&chr.allowedKeys)[i];
 
 			if (i == 6)
@@ -4301,22 +4307,20 @@ bool initStartingKeys(SokuLib::v2::Player * const assist)
 			} else {
 				if (actual * old < 0)
 					old = 0;
-				if (!authorized)
+				if (!authorized || actual == 0)
 					old = 0;
 				else if (actual < 0)
 					old--;
-				else if (actual > 0)
-					old++;
 				else
-					old = 0;
+					old++;
 			}
 		}
 	} else if (chr.startup >= 1 || assist->renderInfos.yRotation > 10) {
 		assist->inputData.keyInput.horizontalAxis = 0;
 		assist->inputData.keyInput.verticalAxis = 0;
 		assist->inputData.keyInput.a = 0;
-		assist->inputData.keyInput.b = assist->keyManager->keymapManager->input.b && assist->inputData.keyInput.b ? assist->inputData.keyInput.b + 1 : 0;
-		assist->inputData.keyInput.c = assist->keyManager->keymapManager->input.c && assist->inputData.keyInput.c ? assist->inputData.keyInput.c + 1 : 0;
+		assist->inputData.keyInput.b = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.b ? assist->inputData.keyInput.b + 1 : 0;
+		assist->inputData.keyInput.c = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.c ? assist->inputData.keyInput.c + 1 : 0;
 		assist->inputData.keyInput.d = 0;
 		assist->inputData.keyInput.spellcard = 0;
 		return false;
@@ -4338,19 +4342,11 @@ bool initStartingKeys(SokuLib::v2::Player * const assist)
 
 void renderKeysResult(const bool b, SokuLib::v2::Player * const assist)
 {
-	//if (assist->offset_0x14E[1])
+	//if (currentIndex(assist) != 2)
 		return;
 	printf(
 		"%s (%i): h %i v %i a %i b %i c %i d %i se %i pa %i ch %i sp %i | h %i v %i a %i b %i c %i d %i ch %i sp %i\n",
 		b ? "true" : "false", b,
-		assist->inputData.keyInput.horizontalAxis,
-		assist->inputData.keyInput.verticalAxis,
-		assist->inputData.keyInput.a,
-		assist->inputData.keyInput.b,
-		assist->inputData.keyInput.c,
-		assist->inputData.keyInput.d,
-		assist->inputData.keyInput.changeCard,
-		assist->inputData.keyInput.spellcard,
 		assist->keyManager->keymapManager->input.horizontalAxis,
 		assist->keyManager->keymapManager->input.verticalAxis,
 		assist->keyManager->keymapManager->input.a,
@@ -4360,7 +4356,15 @@ void renderKeysResult(const bool b, SokuLib::v2::Player * const assist)
 		assist->keyManager->keymapManager->input.select,
 		assist->keyManager->keymapManager->input.pause,
 		assist->keyManager->keymapManager->input.changeCard,
-		assist->keyManager->keymapManager->input.spellcard
+		assist->keyManager->keymapManager->input.spellcard,
+		assist->inputData.keyInput.horizontalAxis,
+		assist->inputData.keyInput.verticalAxis,
+		assist->inputData.keyInput.a,
+		assist->inputData.keyInput.b,
+		assist->inputData.keyInput.c,
+		assist->inputData.keyInput.d,
+		assist->inputData.keyInput.changeCard,
+		assist->inputData.keyInput.spellcard
 	);
 }
 
@@ -4458,11 +4462,11 @@ void __declspec(naked) controllerUpdateOverride()
 		PUSH EBX
 		PUSH EBP
 		PUSH EDI
-		JGE noUpdateController
 		MOV EDI, [EAX]
 		MOV EAX, [EDI]
 		MOV EDX, [EAX + 4]
 		MOV ECX, EDI
+		JGE noUpdateController
 		PUSH EDX
 		MOV EDX, [grInputHook]
 		TEST EDX, EDX

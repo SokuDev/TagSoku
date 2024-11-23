@@ -68,6 +68,7 @@
             "cd": 750,
             "nb": 1,
             "action": 570,
+            "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
             "offsetX": -50,
             "cond": "end"
         },
@@ -75,6 +76,7 @@
             "cd": 750,
             "nb": 1,
             "action": 570,
+            "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
             "speedY": 0,
             "posY": 0,
             "offsetX": -50,
@@ -86,6 +88,7 @@
             "cd": 750,
             "nb": 1,
             "action": 571,
+            "allowedKeys": [0, 0, 0, 0, 1, 0, 0, 0],
             "offsetX": -50,
             "cond": "end"
         },
@@ -93,6 +96,7 @@
             "cd": 750,
             "nb": 1,
             "action": 571,
+            "allowedKeys": [0, 0, 0, 0, 1, 0, 0, 0],
             "posY": 0,
             "offsetX": -50,
             "cond": "end"

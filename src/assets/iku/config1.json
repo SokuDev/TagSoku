@@ -69,6 +69,7 @@
             "cd": 900,
             "nb": 1,
             "action": 545,
+            "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
             "offsetX": -50,
             "cond": "end"
         },
@@ -76,6 +77,7 @@
             "cd": 900,
             "nb": 1,
             "action": 545,
+            "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
             "posY": 0,
             "offsetX": -50,
             "cond": "end"
@@ -86,6 +88,7 @@
             "cd": 900,
             "nb": 1,
             "action": 546,
+            "allowedKeys": [0, 0, 0, 0, 1, 0, 0, 0],
             "offsetX": -50,
             "cond": "end"
         },
@@ -93,6 +96,7 @@
             "cd": 900,
             "nb": 1,
             "action": 546,
+            "allowedKeys": [0, 0, 0, 0, 1, 0, 0, 0],
             "posY": 0,
             "offsetX": -50,
             "cond": "end"
