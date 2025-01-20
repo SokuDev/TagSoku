@@ -993,6 +993,7 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 		chr.gotHit = true;
 	} else if (!chr.started) {
 		if (chr.startAction) {
+			mgr->dashTimer = 0;
 			mgr->setAction(*chr.startAction);
 			if (chr.speed.x)
 				mgr->speed.x = *chr.speed.x;
@@ -1005,10 +1006,11 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 			chr.starting = true;
 		} else if (chr.cutscene != 2 || waitIdle(mgr, chr)){
 			chr.nb--;
+			mgr->dashTimer = 0;
 			if (chr.callInit)
 				mgr->setAction(chr.action);
 			else
-				mgr->SokuLib::v2::AnimationObject::setAction(chr.action);
+				(mgr->*&SokuLib::v2::AnimationObject::setAction)(chr.action);
 			if (chr.collisionLimit)
 				mgr->collisionLimit = *chr.collisionLimit;
 			if (chr.cutscene == 1)
@@ -1044,10 +1046,11 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 		chr.startTimer++;
 		if (chr.startTimer > chr.startMax || (chr.startTimer >= chr.startMin && !fine)) {
 			chr.nb--;
+			mgr->dashTimer = 0;
 			if (chr.callInit)
 				mgr->setAction(chr.action);
 			else
-				mgr->SokuLib::v2::AnimationObject::setAction(chr.action);
+				(mgr->*&SokuLib::v2::AnimationObject::setAction)(chr.action);
 			if (chr.collisionLimit)
 				mgr->collisionLimit = *chr.collisionLimit;
 			chr.starting = false;
@@ -1101,10 +1104,11 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 	} else if (chr.cond(mgr, chr)) {
 		if (chr.nb != 0) {
 			chr.nb--;
+			mgr->dashTimer = 0;
 			if (chr.callInit)
 				mgr->setAction(chr.action);
 			else
-				mgr->SokuLib::v2::AnimationObject::setAction(chr.action);
+				(mgr->*&SokuLib::v2::AnimationObject::setAction)(chr.action);
 			if (chr.collisionLimit)
 				mgr->collisionLimit = *chr.collisionLimit;
 			if (chr.cutscene == 1)
@@ -1113,6 +1117,7 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 				displayTaggingEffect2(*mgr);
 		} else if (chr.end) {
 			chr.ending = true;
+			mgr->dashTimer = 0;
 			mgr->setAction(chr.end);
 		} else {
 			chr.currentStance = chr.stance;
@@ -1149,7 +1154,7 @@ static void initSkillUpgrade(ChrInfo &chr, SokuLib::Character character, SokuLib
 	chr.maxCd = 0;
 	chr.ctr = 0;
 	chr.collisionLimit.reset();
-	chr.action = SokuLib::ACTION_SKILL_CARD;
+	chr.action = SokuLib::ACTION_SYSTEM_CARD;
 	chr.chr = character;
 	chr.loadoutIndex = index;
 	chr.resetValues.clear();
@@ -1204,7 +1209,7 @@ static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2:
 	chr.startMax = 0;
 	chr.startTimer = 0;
 	chr.cond = waitIdle;
-	chr.action = SokuLib::ACTION_SKILL_CARD;
+	chr.action = SokuLib::ACTION_SYSTEM_CARD;
 	if (main.frameState.actionId >= SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN && main.frameState.actionId <= SokuLib::ACTION_NEUTRAL_TECH) {
 		chr.recovery = 30;
 		chr.slowTag = true;
@@ -1255,6 +1260,7 @@ bool initAttack(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &ch
 			obj->position.y += 200 * (obj->position.y == 0);
 			break;
 		}
+		chr.callInit = true;
 		obj->direction = main->direction;
 		obj->speed = main->speed;
 		if (chr.speed.x)
@@ -4663,8 +4669,8 @@ void checkShock(SokuLib::v2::Player &chr, SokuLib::v2::Player &op, ChrInfo &info
 		return;
 	if (SokuLib::activeWeather != SokuLib::WEATHER_SUNNY) {
 		chr.currentSpirit = chr.maxSpirit - 200;
-		if (info.meter >= ASSIST_CARD_METER)
-			info.meter -= ASSIST_CARD_METER;
+		if (info.meter >= ASSIST_CARD_METER * 2)
+			info.meter -= ASSIST_CARD_METER * 2;
 		else
 			chr.maxSpirit -= 200;
 		chr.timeWithBrokenOrb = 0;
@@ -5008,8 +5014,8 @@ void *onLoadingDone()
 
 	SokuLib::v2::Player** players = (SokuLib::v2::Player**)((int)&SokuLib::getBattleMgr() + 0xC);
 
-	assists.first.keyManager = SokuLib::leftPlayerInfo.keyManager;
-	assists.second.keyManager = SokuLib::rightPlayerInfo.keyManager;
+	assists.first.keyManager = SokuLib::v2::GameDataManager::instance->players[0]->keyManager;
+	assists.second.keyManager = SokuLib::v2::GameDataManager::instance->players[1]->keyManager;
 
 	puts("Not spawned. Loading both assisters");
 	puts("Loading character 1");
@@ -5304,7 +5310,7 @@ int __stdcall my_recvfrom(SOCKET s, char * buf, int len, int flags, sockaddr * f
 {
 	int ret = og_recvfrom(s, buf, len, flags, from, fromlen);
 	auto packet = (SokuLib::Packet *)buf;
-
+/*
 	mutex.lock();
 	std::cout << "RECV: ";
 	mutex.unlock();
@@ -5349,7 +5355,7 @@ int __stdcall my_recvfrom(SOCKET s, char * buf, int len, int flags, sockaddr * f
 	}
 	mutex.lock();
 	std::cout << std::endl;
-	mutex.unlock();
+	mutex.unlock();*/
 	if (SokuLib::mainMode != SokuLib::BATTLE_MODE_VSSERVER)
 		return ret;
 	if (packet->type != SokuLib::CLIENT_GAME && packet->type != SokuLib::HOST_GAME)
@@ -5367,7 +5373,7 @@ int __stdcall my_recvfrom(SOCKET s, char * buf, int len, int flags, sockaddr * f
 int __stdcall my_sendto(SOCKET s, char * buf, int len, int flags, sockaddr * to, int tolen)
 {
 	auto packet = (SokuLib::Packet *)buf;
-
+/*
 	mutex.lock();
 	std::cout << "SEND: ";
 	mutex.unlock();
@@ -5409,7 +5415,7 @@ int __stdcall my_sendto(SOCKET s, char * buf, int len, int flags, sockaddr * to,
 	}
 	mutex.lock();
 	std::cout << std::endl;
-	mutex.unlock();
+	mutex.unlock();*/
 	return og_sendto(s, buf, len, flags, to, tolen);
 }
 
@@ -5502,7 +5508,8 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	s_originalCProfileDeckEdit_Destructor= SokuLib::TamperDword(&SokuLib::VTable_ProfileDeckEdit.onDestruct, CProfileDeckEdit_Destructor);
 	ogHudRender = (int (__thiscall *)(void *))SokuLib::TamperDword(0x85b544, onHudRender);
 	for (int i = 0; i < 32; i++)
-		((unsigned char *)0x858B80)[i] ^= versionMask[i % sizeof(versionMask)];
+		if (i & 15)
+			((unsigned char *)0x858B80)[i] ^= versionMask[i % sizeof(versionMask)];
 	og_sendto    = SokuLib::TamperDword(&SokuLib::DLL::ws2_32.sendto, my_sendto);
 	og_recvfrom  = SokuLib::TamperDword(&SokuLib::DLL::ws2_32.recvfrom, my_recvfrom);
 	::VirtualProtect((PVOID)RDATA_SECTION_OFFSET, RDATA_SECTION_SIZE, old, &old);
