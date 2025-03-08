@@ -1,41 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout version="4">
-	<static id="0" xposition="0" yposition="54" mirror="0">
-		<image name="centerObjectC.bmp" xposition="0" yposition="0" width="640" height="111"/>
+	<static id="0" xposition="0" yposition="55" mirror="0">
+		<image name="1PlifeGageB_small.bmp" xposition="0" yposition="0" width="141" height="22"/>
+	</static>
+	<static id="0" xposition="640" yposition="55" mirror="1">
+		<image name="1PlifeGageB_small.bmp" xposition="0" yposition="0" width="141" height="22"/>
 	</static>
 
-	<static id="0" xposition="0" yposition="84" mirror="0">
-		<image name="1PlifeGageB.bmp" xposition="0" yposition="0" width="268" height="32"/>
-	</static>
-	<static id="0" xposition="640" yposition="84" mirror="1">
-		<image name="1PlifeGageB.bmp" xposition="0" yposition="0" width="268" height="32"/>
-	</static>
-
-	<sliderhorz id="15" xposition="10" yposition="88" mirror="0">
-		<image name="lifeUnderB.bmp" xposition="0" yposition="0" width="252" height="17"/>
+	<sliderhorz id="15" xposition="9" yposition="58" mirror="0">
+		<image name="lifeUnderB_small.bmp" xposition="0" yposition="0" width="126" height="8"/>
 	</sliderhorz>
-	<sliderhorz id="16" xposition="630" yposition="88" mirror="1">
-		<image name="lifeUnderB.bmp" xposition="0" yposition="0" width="252" height="17"/>
+	<sliderhorz id="16" xposition="631" yposition="58" mirror="1">
+		<image name="lifeUnderB_small.bmp" xposition="0" yposition="0" width="126" height="8"/>
 	</sliderhorz>
-	<sliderhorz id="10" xposition="10" yposition="88" mirror="0">
-		<image name="1PlifeBarB.bmp" xposition="0" yposition="0" width="252" height="17"/>
+	<sliderhorz id="10" xposition="9" yposition="58" mirror="0">
+		<image name="1PlifeBarB_small.bmp" xposition="0" yposition="0" width="126" height="8"/>
 	</sliderhorz>
-	<sliderhorz id="11" xposition="630" yposition="88" mirror="1">
-		<image name="1PlifeBarB.bmp" xposition="0" yposition="0" width="252" height="17"/>
+	<sliderhorz id="11" xposition="631" yposition="58" mirror="1">
+		<image name="1PlifeBarB_small.bmp" xposition="0" yposition="0" width="126" height="8"/>
 	</sliderhorz>
 
-	<static id="0" xposition="230" yposition="-114" mirror="0">
-		<image name="winGaugeB.bmp" xposition="1" yposition="0" width="27" height="15"/>
-	</static>
-	<static id="0" xposition="204" yposition="-114" mirror="0">
-		<image name="winGaugeB.bmp" xposition="1" yposition="0" width="27" height="15"/>
-	</static>
-	<static id="0" xposition="410" yposition="-114" mirror="1">
-		<image name="winGaugeB.bmp" xposition="1" yposition="0" width="27" height="15"/>
-	</static>
-	<static id="0" xposition="436" yposition="-114" mirror="1">
-		<image name="winGaugeB.bmp" xposition="1" yposition="0" width="27" height="15"/>
-	</static>
 	<static id="20" xposition="240" yposition="-116" mirror="0">
 		<image name="winB.bmp" xposition="0" yposition="0" width="13" height="7"/>
 	</static>

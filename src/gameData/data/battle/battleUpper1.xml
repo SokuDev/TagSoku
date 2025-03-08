@@ -24,28 +24,28 @@
 		<image name="1PlifeBarB.bmp" xposition="0" yposition="0" width="252" height="17"/>
 	</sliderhorz>
 
-	<static id="0" xposition="230" yposition="114" mirror="0">
+	<static id="0" xposition="230" yposition="75" mirror="0">
 		<image name="winGaugeB.bmp" xposition="1" yposition="0" width="27" height="15"/>
 	</static>
-	<static id="0" xposition="204" yposition="114" mirror="0">
+	<static id="0" xposition="204" yposition="75" mirror="0">
 		<image name="winGaugeB.bmp" xposition="1" yposition="0" width="27" height="15"/>
 	</static>
-	<static id="0" xposition="410" yposition="114" mirror="1">
+	<static id="0" xposition="410" yposition="75" mirror="1">
 		<image name="winGaugeB.bmp" xposition="1" yposition="0" width="27" height="15"/>
 	</static>
-	<static id="0" xposition="436" yposition="114" mirror="1">
+	<static id="0" xposition="436" yposition="75" mirror="1">
 		<image name="winGaugeB.bmp" xposition="1" yposition="0" width="27" height="15"/>
 	</static>
-	<static id="20" xposition="240" yposition="116" mirror="0">
+	<static id="20" xposition="240" yposition="77" mirror="0">
 		<image name="winB.bmp" xposition="0" yposition="0" width="13" height="7"/>
 	</static>
-	<static id="21" xposition="214" yposition="116" mirror="0">
+	<static id="21" xposition="214" yposition="77" mirror="0">
 		<image name="winB.bmp" xposition="0" yposition="0" width="13" height="7"/>
 	</static>
-	<static id="25" xposition="400" yposition="116" mirror="1">
+	<static id="25" xposition="400" yposition="77" mirror="1">
 		<image name="winB.bmp" xposition="0" yposition="0" width="13" height="7"/>
 	</static>
-	<static id="26" xposition="426" yposition="116" mirror="1">
+	<static id="26" xposition="426" yposition="77" mirror="1">
 		<image name="winB.bmp" xposition="0" yposition="0" width="13" height="7"/>
 	</static>
 

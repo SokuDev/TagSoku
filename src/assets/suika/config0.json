@@ -1,95 +1,50 @@
 {
     "spells": [201],
     "shownCost": 2,
-    "5a": {
-        "ground": {
-            "cd": 360,
-            "nb": 1,
-            "action": 408,
-            "hitCount": 3,
-            "offsetX": -15,
-            "speedX": 15
-        },
-        "air": {
-            "cd": 360,
-            "nb": 1,
-            "action": 307,
-            "offsetX": 50,
-            "speedY": 0
-        }
-    },
-    "5b": {
-        "ground": {
-            "cd": 300,
-            "nb": 1,
-            "action": 401
-        },
-        "air": {
-            "cd": 300,
-            "nb": 1,
-            "posY": 0,
-            "action": 401
-        }
-    },
-    "5c": {
-        "ground": {
-            "cd": 390,
-            "nb": 1,
-            "action": 410
-        },
-        "air": {
-            "cd": 390,
-            "nb": 1,
-            "action": 410,
-            "posY": 0
-        }
-    },
-
-
-
 
     "8a": {
         "ground": {
             "cd": 450,
             "nb": 1,
-            "action": 565,
-            "recovery": 12,
-            "cond": "basic"
+            "action": 530
         },
         "air": {
             "cd": 450,
             "nb": 1,
-            "action": 565,
-            "posY": 0,
-            "recovery": 12,
-            "cond": "basic"
+            "action": 530,
+            "posY": 0
         }
     },
     "8b": {
         "ground": {
-            "cd": 900,
+            "cd": 450,
             "nb": 1,
             "action": 540,
             "offsetX": 0
         },
         "air": {
-            "cd": 900,
+            "cd": 450,
             "nb": 1,
-            "action": 542,
+            "posY": 0,
+            "action": 540,
             "offsetX": 0
         }
     },
     "8c": {
         "ground": {
-            "cd": 900,
+            "cd": 225,
             "nb": 1,
-            "action": 530
+            "action": 565,
+            "recovery": 12,
+            "cond": "basic"
         },
         "air": {
-            "cd": 900,
+            "cd": 225,
             "nb": 1,
-            "action": 530,
-            "posY": 0
+            "action": 565,
+            "posY": 0,
+            "recovery": 12,
+            "cond": "basic"
         }
     },
 
@@ -99,7 +54,7 @@
             "speedY": 0,
             "cost": 2,
             "cardName": 201,
-            "cd": 1200,
+            "cd": 300,
             "nb": 1,
             "action": 601
         },
@@ -110,7 +65,7 @@
             "gravityY": 0,
             "cost": 2,
             "cardName": 201,
-            "cd": 1200,
+            "cd": 300,
             "nb": 1,
             "action": 601
         }

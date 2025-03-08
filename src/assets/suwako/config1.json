@@ -4,7 +4,7 @@
 
     "8a": {
         "ground": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
             "action": 525,
             "offsetX": -50,
@@ -12,7 +12,7 @@
             "cond": "end"
         },
         "air": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
             "action": 527,
             "speedY": 0,
@@ -25,7 +25,24 @@
     },
     "8b": {
         "ground": {
-            "cd": 600,
+            "cd": 300,
+            "nb": 1,
+            "action": 562,
+            "offsetX": -50,
+            "cond": "end"
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 562,
+            "posY": 0,
+            "offsetX": -50,
+            "cond": "end"
+        }
+    },
+    "8c": {
+        "ground": {
+            "cd": 300,
             "nb": 1,
             "action": 545,
             "offsetX": 0,
@@ -33,29 +50,12 @@
             "recovery": 30
         },
         "air": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
             "action": 547,
             "offsetX": 0,
             "cond": "basic",
             "recovery": 30
-        }
-    },
-    "8c": {
-        "ground": {
-            "cd": 600,
-            "nb": 1,
-            "action": 562,
-            "offsetX": -50,
-            "cond": "end"
-        },
-        "air": {
-            "cd": 600,
-            "nb": 1,
-            "action": 562,
-            "posY": 0,
-            "offsetX": -50,
-            "cond": "end"
         }
     },
 
@@ -66,7 +66,7 @@
             "offsetX": -50,
             "cost": 2,
             "cardName": 204,
-            "cd": 1200,
+            "cd": 300,
             "nb": 1,
             "action": 604
         },
@@ -78,7 +78,7 @@
             "posY": 0,
             "cost": 2,
             "cardName": 204,
-            "cd": 1200,
+            "cd": 300,
             "nb": 1,
             "action": 654
         }

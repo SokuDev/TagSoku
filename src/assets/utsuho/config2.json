@@ -1,62 +1,20 @@
 {
     "spells": [214],
     "shownCost": 5,
-    "5a": {
-        "ground": {
-            "cd": 360,
-            "nb": 1,
-            "action": 301,
-            "offsetX": -15
-        },
-        "air": {
-            "cd": 360,
-            "nb": 1,
-            "action": 301,
-            "offsetX": -15,
-            "posY": 0
-        }
-    },
-    "5b": {
-        "ground": {
-            "cd": 420,
-            "nb": 1,
-            "action": 401
-        },
-        "air": {
-            "cd": 420,
-            "nb": 1,
-            "action": 405,
-            "speedY": 0,
-            "gravityY": 0
-        }
-    },
-    "5c": {
-        "ground": {
-            "cd": 360,
-            "nb": 1,
-            "action": 412
-        },
-        "air": {
-            "cd": 360,
-            "nb": 1,
-            "action": 412,
-            "posY": 0
-        }
-    },
-
-
 
     "8a": {
         "ground": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
-            "action": 520,
+            "action": 560,
+            "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
             "offsetX": -50
         },
         "air": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
-            "action": 522,
+            "action": 562,
+            "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
             "offsetX": -50,
             "speedY": 0,
             "gravityY": 0
@@ -64,15 +22,15 @@
     },
     "8b": {
         "ground": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
-            "action": 560,
+            "action": 520,
             "offsetX": -50
         },
         "air": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
-            "action": 562,
+            "action": 522,
             "offsetX": -50,
             "speedY": 0,
             "gravityY": 0
@@ -80,18 +38,19 @@
     },
     "8c": {
         "ground": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
             "action": 550,
+            "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
             "offsetX": -50
         },
         "air": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
-            "action": 552,
+            "action": 550,
+            "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
             "offsetX": -50,
-            "speedY": 0,
-            "gravityY": 0
+            "posY": 0
         }
     },
 

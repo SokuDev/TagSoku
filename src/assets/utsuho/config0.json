@@ -1,75 +1,16 @@
 {
     "spells": [205],
     "shownCost": 3,
-    "5a": {
-        "ground": {
-            "cd": 360,
-            "nb": 1,
-            "action": 301,
-            "offsetX": -15
-        },
-        "air": {
-            "cd": 360,
-            "nb": 1,
-            "action": 301,
-            "offsetX": -15,
-            "posY": 0
-        }
-    },
-    "5b": {
-        "ground": {
-            "cd": 420,
-            "nb": 1,
-            "action": 401
-        },
-        "air": {
-            "cd": 420,
-            "nb": 1,
-            "action": 405,
-            "speedY": 0,
-            "gravityY": 0
-        }
-    },
-    "5c": {
-        "ground": {
-            "cd": 360,
-            "nb": 1,
-            "action": 412
-        },
-        "air": {
-            "cd": 360,
-            "nb": 1,
-            "action": 412,
-            "posY": 0
-        }
-    },
-
-
 
     "8a": {
         "ground": {
-            "cd": 600,
-            "nb": 1,
-            "action": 525,
-            "offsetX": -50
-        },
-        "air": {
-            "cd": 600,
-            "nb": 1,
-            "action": 525,
-            "offsetX": -50,
-            "posY": 0
-        }
-    },
-    "8b": {
-        "ground": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
             "action": 540,
             "offsetX": -50
         },
         "air": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
             "action": 542,
             "offsetX": -50,
@@ -77,15 +18,30 @@
             "gravityY": 0
         }
     },
+    "8b": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 525,
+            "offsetX": -50
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 525,
+            "offsetX": -50,
+            "posY": 0
+        }
+    },
     "8c": {
         "ground": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
             "action": 505,
             "offsetX": -50
         },
         "air": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
             "action": 507,
             "offsetX": -50,
@@ -101,7 +57,7 @@
             "offsetX": -50,
             "cost": 3,
             "cardName": 205,
-            "cd": 1200,
+            "cd": 300,
             "nb": 1,
             "action": 605
         },
@@ -112,7 +68,7 @@
             "offsetX": -50,
             "cost": 3,
             "cardName": 205,
-            "cd": 1200,
+            "cd": 300,
             "nb": 1,
             "action": 655
         }

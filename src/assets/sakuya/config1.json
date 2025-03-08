@@ -1,69 +1,17 @@
 {
     "spells": [204],
     "shownCost": 5,
-    "5a": {
-        "ground": {
-            "cd": 300,
-            "nb": 1,
-            "action": 304,
-            "offsetX": -15
-        },
-        "air": {
-            "cd": 300,
-            "nb": 1,
-            "start": 202,
-            "startMin": 10,
-            "startMax": 20,
-            "startKeys": [1, 0, 0, 0, 0, 0, 0, 0],
-            "action": 307,
-            "offsetX": -15
-        }
-    },
-    "5b": {
-        "ground": {
-            "cd": 360,
-            "nb": 1,
-            "action": 402
-        },
-        "air": {
-            "cd": 360,
-            "nb": 1,
-            "action": 402,
-            "posY": 0
-        }
-    },
-    "5c": {
-        "ground": {
-            "cd": 420,
-            "nb": 1,
-            "action": 414,
-            "speedY": 0,
-            "gravityY": 0,
-            "offsetX": -20,
-            "posY": 100
-        },
-        "air": {
-            "cd": 420,
-            "nb": 1,
-            "action": 414,
-            "speedY": 0,
-            "gravityY": 0,
-            "offsetX": -20,
-            "offsetY": 20
-        }
-    },
-
 
     "8a": {
         "ground": {
-            "cd": 450,
+            "cd": 225,
             "nb": 1,
             "action": 565,
             "offsetX": 50,
             "cond": "end"
         },
         "air": {
-            "cd": 450,
+            "cd": 225,
             "nb": 1,
             "action": 565,
             "posY": 0,
@@ -73,35 +21,35 @@
     },
     "8b": {
         "ground": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
-            "action": 530,
-            "offsetX": -50,
+            "action": 550,
+            "offsetX": -150,
             "cond": "end"
         },
         "air": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
-            "action": 530,
+            "action": 550,
             "posY": 0,
-            "offsetX": -50,
+            "offsetX": -150,
             "cond": "end"
         }
     },
     "8c": {
         "ground": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
-            "action": 550,
-            "offsetX": -150,
+            "action": 530,
+            "offsetX": -50,
             "cond": "end"
         },
         "air": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
-            "action": 550,
+            "action": 530,
             "posY": 0,
-            "offsetX": -150,
+            "offsetX": -50,
             "cond": "end"
         }
     },
@@ -113,7 +61,7 @@
             "offsetX": -50,
             "cost": 5,
             "cardName": 204,
-            "cd": 1200,
+            "cd": 300,
             "nb": 1,
             "action": 604
         },
@@ -125,7 +73,7 @@
             "posY": 0,
             "cost": 5,
             "cardName": 204,
-            "cd": 1200,
+            "cd": 300,
             "nb": 1,
             "action": 604
         }

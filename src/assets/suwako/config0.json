@@ -4,27 +4,44 @@
 
     "8a": {
         "ground": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
-            "action": 512,
+            "action": 510,
             "recovery": 10,
+            "posY": 0,
             "offsetX": -50,
             "cond": "end"
         },
         "air": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
-            "action": 512,
+            "action": 510,
             "posY": 0,
             "recovery": 10,
             "offsetX": -50,
             "cond": "end"
         }
     },
-
     "8b": {
         "ground": {
-            "cd": 600,
+            "cd": 300,
+            "nb": 1,
+            "action": 565,
+            "offsetX": -50,
+            "cond": "end"
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 565,
+            "posY": 0,
+            "offsetX": -50,
+            "cond": "end"
+        }
+    },
+    "8c": {
+        "ground": {
+            "cd": 300,
             "nb": 1,
             "action": 550,
             "offsetX": 0,
@@ -32,7 +49,7 @@
             "recovery": 10
         },
         "air": {
-            "cd": 600,
+            "cd": 300,
             "nb": 1,
             "action": 552,
             "speedY": 0,
@@ -43,24 +60,6 @@
         }
     },
 
-    "8c": {
-        "ground": {
-            "cd": 600,
-            "nb": 1,
-            "action": 565,
-            "offsetX": -50,
-            "cond": "end"
-        },
-        "air": {
-            "cd": 600,
-            "nb": 1,
-            "action": 565,
-            "posY": 0,
-            "offsetX": -50,
-            "cond": "end"
-        }
-    },
-
     "5s": {
         "ground": {
             "speedX": 0,
@@ -68,7 +67,7 @@
             "offsetX": -50,
             "cost": 3,
             "cardName": 203,
-            "cd": 1200,
+            "cd": 300,
             "nb": 1,
             "action": 603
         },
@@ -80,7 +79,7 @@
             "offsetY": 0,
             "cost": 3,
             "cardName": 203,
-            "cd": 1200,
+            "cd": 300,
             "nb": 1,
             "action": 653
         }
