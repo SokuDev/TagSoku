@@ -27,6 +27,7 @@
             "cd": 450,
             "nb": 1,
             "action": 570,
+            "posY": 0,
             "speedY": 0,
             "gravityY": 0
         }

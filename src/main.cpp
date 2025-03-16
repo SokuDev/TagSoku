@@ -3,6 +3,7 @@
 //
 
 #define _USE_MATH_DEFINES 1
+#include <random>
 #include <fstream>
 #include <sstream>
 #include <optional>
@@ -216,84 +217,6 @@ public:
 		}
 	}
 };
-
-void displayPacket(SokuLib::Packet *packet, const std::string &start)
-{
-	mutex.lock();
-	logStream << start;
-	mutex.unlock();
-	switch (packet->type) {
-	case SokuLib::CLIENT_GAME:
-	case SokuLib::HOST_GAME:
-		mutex.lock();
-		logStream << "type: " << SokuLib::PacketTypeToString(packet->type);
-		mutex.unlock();
-		switch (packet->game.event.type) {
-		case SokuLib::GAME_MATCH: {
-			auto packet_ = (PacketGameMatchEvent *)packet;
-
-			mutex.lock();
-			logStream << " p1: " << (*packet_)[0] << std::endl;
-			logStream << " p2: " << (*packet_)[1] << std::endl;
-			logStream << " p3: " << (*packet_)[2] << std::endl;
-			logStream << " p4: " << (*packet_)[3] << std::endl;
-			logStream << " loadouts: [";
-			logStream << (int) (*packet_).loadouts(0) << ", ";
-			logStream << (int) (*packet_).loadouts(1) << ", ";
-			logStream << (int) (*packet_).loadouts(2) << ", ";
-			logStream << (int) (*packet_).loadouts(1) << "]";
-			logStream << ", stageId: " << (int) (*packet_).stageId();
-			logStream << ", musicId: " << (int) (*packet_).musicId();
-			logStream << ", randomSeed: " << (*packet_).randomSeed();
-			logStream << ", matchId: " << (int) (*packet_).matchId();
-			mutex.unlock();
-			break;
-		}
-		case SokuLib::GAME_REPLAY: {
-			std::vector<byte> out;
-			int err = ZUtils::decompress(packet->game.event.replay.compressedData, packet->game.event.replay.replaySize, out);
-
-			logStream << ", compressedSize: " << (int)packet->game.event.replay.replaySize;
-			if (err != Z_OK) {
-				logStream << ", failed to decompress data: " << ZUtils::zerror(err);
-				break;
-			}
-
-			struct Test {
-				unsigned frameId;
-				unsigned maxFrameId;
-				unsigned char gameId;
-				unsigned char length;
-				unsigned short data[1];
-			};
-			auto a = reinterpret_cast<Test *>(out.data());
-
-			logStream << ", frameId: " << a->frameId;
-			logStream << ", maxFrameId: " << a->maxFrameId;
-			logStream << ", gameId: " << static_cast<int>(a->gameId);
-			logStream << ", inputCount: " << static_cast<int>(a->length);
-			logStream << ", inputs: [" << std::hex;
-			for (int i = 0; i < a->length; i++)
-				logStream << (i == 0 ? "" : ", ") << a->data[i];
-			logStream << "]" << std::dec;
-			break;
-		}
-		default:
-			mutex.lock();
-			displayGameEvent(logStream, packet->game.event);
-			mutex.unlock();
-			break;
-		}
-		break;
-	default:
-		mutex.lock();
-		SokuLib::displayPacketContent(logStream, *packet);
-		mutex.unlock();
-	}
-	mutex.lock();
-	logStream << std::endl;
-	mutex.unlock();
-}
 #endif
 
 struct Deck {
@@ -641,7 +564,6 @@ static unsigned char loadouts[4] = {1, 1, 1, 1};
 static SokuLib::InputHandler loadoutHandler[4];
 static unsigned chrLoadingIndex = 0;
 
-auto sokuRand = (int (*)(int max))0x4099F0;
 auto getCharName = (char *(*)(int))0x43F3F0;
 auto setRenderMode = [](int mode) {
 	((void (__thiscall *)(int, int))0x404B80)(0x896B4C, mode);
@@ -708,6 +630,96 @@ static std::pair<SokuLib::PlayerInfo, SokuLib::PlayerInfo> assists = {
 };
 static void (*og_loadDat)(const char *path);
 static std::map<unsigned, std::array<std::array<unsigned, 4>, 3>> loadedLoadouts;
+static std::mt19937 random;
+
+#ifdef _DEBUG
+void displayPacket(SokuLib::Packet *packet, const std::string &start)
+{
+	mutex.lock();
+	logStream << start;
+	mutex.unlock();
+	switch (packet->type) {
+	case SokuLib::CLIENT_GAME:
+	case SokuLib::HOST_GAME:
+		mutex.lock();
+		logStream << "type: " << SokuLib::PacketTypeToString(packet->type);
+		mutex.unlock();
+		switch (packet->game.event.type) {
+		case SokuLib::GAME_MATCH: {
+			auto packet_ = (PacketGameMatchEvent *)packet;
+
+			mutex.lock();
+			logStream << " p1: " << (*packet_)[0] << std::endl;
+			logStream << " p2: " << (*packet_)[1] << std::endl;
+			logStream << " p3: " << (*packet_)[2] << std::endl;
+			logStream << " p4: " << (*packet_)[3] << std::endl;
+			logStream << " loadouts: [";
+			logStream << (int) (*packet_).loadouts(0) << ", ";
+			logStream << (int) (*packet_).loadouts(1) << ", ";
+			logStream << (int) (*packet_).loadouts(2) << ", ";
+			logStream << (int) (*packet_).loadouts(1) << "]";
+			logStream << ", stageId: " << (int) (*packet_).stageId();
+			logStream << ", musicId: " << (int) (*packet_).musicId();
+			logStream << ", randomSeed: " << (*packet_).randomSeed();
+			logStream << ", matchId: " << (int) (*packet_).matchId();
+			mutex.unlock();
+			break;
+		}
+		case SokuLib::GAME_REPLAY: {
+			std::vector<byte> out;
+			int err = ZUtils::decompress(packet->game.event.replay.compressedData, packet->game.event.replay.replaySize, out);
+
+			logStream << ", compressedSize: " << (int)packet->game.event.replay.replaySize;
+			if (err != Z_OK) {
+				logStream << ", failed to decompress data: " << ZUtils::zerror(err);
+				break;
+			}
+
+			struct Test {
+				unsigned frameId;
+				unsigned maxFrameId;
+				unsigned char gameId;
+				unsigned char length;
+				unsigned short data[1];
+			};
+			auto a = reinterpret_cast<Test *>(out.data());
+
+			logStream << ", frameId: " << a->frameId;
+			logStream << ", maxFrameId: " << a->maxFrameId;
+			logStream << ", gameId: " << static_cast<int>(a->gameId);
+			logStream << ", inputCount: " << static_cast<int>(a->length);
+			logStream << ", inputs: [" << std::hex;
+			for (int i = 0; i < a->length; i++)
+				logStream << (i == 0 ? "" : ", ") << a->data[i];
+			logStream << "]" << std::dec;
+			break;
+		}
+		default:
+			mutex.lock();
+			displayGameEvent(logStream, packet->game.event);
+			mutex.unlock();
+			break;
+		}
+		break;
+	default:
+		mutex.lock();
+		SokuLib::displayPacketContent(logStream, *packet);
+		mutex.unlock();
+	}
+	mutex.lock();
+	logStream << std::endl;
+	mutex.unlock();
+}
+#else
+void displayPacket(SokuLib::Packet *, const std::string &)
+{
+}
+#endif
+
+unsigned int sokuRand(int max)
+{
+	return random() % max;
+}
 
 void loadExtraDatFiles(const char *path)
 {
@@ -1081,7 +1093,26 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 			main->renderInfos.yRotation -= 10;
 		} else if (chr.deathTag && chr.tagTimer < 60) {
 			chr.tagTimer++;
+			if (
+				main->boxData.hitBoxCount != 0 &&
+				(
+					main->comboRate != 0 || main->comboCount == 0 ||
+					main->gameData.opponent->frameState.actionId < SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN ||
+					main->gameData.opponent->frameState.actionId >= SokuLib::ACTION_GRABBED
+				)
+			) {
+				float angle = std::atan2(main->gameData.opponent->position.y - main->position.y, main->gameData.opponent->position.x - main->position.x);
+
+				main->gameData.opponent->setAction(SokuLib::ACTION_AIR_HIT_CAN_WALL_SLAM);
+				main->gameData.opponent->speed.x = std::cos(angle) * 30 * main->gameData.opponent->direction;
+				main->gameData.opponent->speed.y = std::sin(angle) * 30 + 7.5;
+				main->damageOpponent(0, 0, main->comboCount == 0, false);
+				main->gameData.opponent->untech = 9999;
+			}
 			main->timeStop = 2;
+			main->projectileInvulTimer = 2;
+			main->grabInvulTimer = 2;
+			main->meleeInvulTimer = 2;
 		} else if (chr.slowTag && chr.tagTimer < SLOW_TAG_STARTUP) {
 			chr.tagTimer++;
 		} else {
@@ -1624,16 +1655,14 @@ void generateFakeDecks(SokuLib::Character c1, SokuLib::Character c2)
 		return;
 	}
 
-	std::unique_ptr<std::array<unsigned short, 20>> tmp;
-
 	if (!generated || generatedC.first != c1) {
-		generateFakeDeck(c1, lastChrs[1], selectedDecks[1], loadedDecks[0][c1], tmp);
-		convertDeckToSokuFormat(tmp, SokuLib::rightPlayerInfo.effectiveDeck);
+		generateFakeDeck(c1, lastChrs[1], selectedDecks[1], loadedDecks[0][c1], fakeDeck[1]);
+		convertDeckToSokuFormat(fakeDeck[1], SokuLib::rightPlayerInfo.effectiveDeck);
 	}
 	if (!generated || generatedC.second != c2) {
-		generateFakeDeck(c2, lastChrs[3], assists.second.deck, loadedDecks[0][c2], tmp);
-		convertDeckToSokuFormat(tmp, netplayDeck.second);
-		convertDeckToSokuFormat(tmp, assists.second.effectiveDeck);
+		generateFakeDeck(c2, lastChrs[3], assists.second.deck, loadedDecks[0][c2], fakeDeck[3]);
+		convertDeckToSokuFormat(fakeDeck[3], netplayDeck.second);
+		convertDeckToSokuFormat(fakeDeck[3], assists.second.effectiveDeck);
 	}
 	generated = true;
 }
@@ -1646,32 +1675,30 @@ void generateFakeDecks()
 		return;
 	generated = true;
 
-	std::unique_ptr<std::array<unsigned short, 20>> tmp;
-
 	if (SokuLib::mainMode == SokuLib::BATTLE_MODE_VSSERVER) {
-		generateFakeDeck(SokuLib::rightChar, lastChrs[1], selectedDecks[1], loadedDecks[0][SokuLib::rightChar], tmp);
-		convertDeckToSokuFormat(tmp, netplayDeck.first);
-		convertDeckToSokuFormat(tmp, SokuLib::rightPlayerInfo.effectiveDeck);
-		generateFakeDeck(assists.second.character, lastChrs[3], assists.second.deck, loadedDecks[0][assists.second.character], tmp);
-		convertDeckToSokuFormat(tmp, netplayDeck.second);
-		convertDeckToSokuFormat(tmp, assists.second.effectiveDeck);
+		generateFakeDeck(SokuLib::rightChar, lastChrs[1], selectedDecks[1], loadedDecks[0][SokuLib::rightChar], fakeDeck[1]);
+		convertDeckToSokuFormat(fakeDeck[1], netplayDeck.first);
+		convertDeckToSokuFormat(fakeDeck[1], SokuLib::rightPlayerInfo.effectiveDeck);
+		generateFakeDeck(assists.second.character, lastChrs[3], assists.second.deck, loadedDecks[0][assists.second.character], fakeDeck[3]);
+		convertDeckToSokuFormat(fakeDeck[3], netplayDeck.second);
+		convertDeckToSokuFormat(fakeDeck[3], assists.second.effectiveDeck);
 		generatedC = {SokuLib::rightChar, assists.second.character};
 	} else if (SokuLib::mainMode == SokuLib::BATTLE_MODE_VSCLIENT) {
-		generateFakeDeck(SokuLib::leftChar, lastChrs[0], selectedDecks[0], loadedDecks[0][SokuLib::leftChar], tmp);
-		convertDeckToSokuFormat(tmp, SokuLib::leftPlayerInfo.effectiveDeck);
-		generateFakeDeck(assists.first.character, lastChrs[2], assists.first.deck, loadedDecks[0][assists.first.character], tmp);
-		convertDeckToSokuFormat(tmp, netplayDeck.first);
-		convertDeckToSokuFormat(tmp, assists.first.effectiveDeck);
+		generateFakeDeck(SokuLib::leftChar, lastChrs[0], selectedDecks[0], loadedDecks[0][SokuLib::leftChar], fakeDeck[0]);
+		convertDeckToSokuFormat(fakeDeck[0], SokuLib::leftPlayerInfo.effectiveDeck);
+		generateFakeDeck(assists.first.character, lastChrs[2], assists.first.deck, loadedDecks[0][assists.first.character], fakeDeck[2]);
+		convertDeckToSokuFormat(fakeDeck[2], netplayDeck.first);
+		convertDeckToSokuFormat(fakeDeck[2], assists.first.effectiveDeck);
 		generatedC = {SokuLib::leftChar, assists.first.character};
 	} else {
-		generateFakeDeck(SokuLib::leftChar, lastChrs[0], selectedDecks[0], loadedDecks[0][SokuLib::leftChar], tmp);
-		convertDeckToSokuFormat(tmp, SokuLib::leftPlayerInfo.effectiveDeck);
-		generateFakeDeck(SokuLib::rightChar, lastChrs[1], selectedDecks[1], loadedDecks[1][SokuLib::rightChar], tmp);
-		convertDeckToSokuFormat(tmp, SokuLib::rightPlayerInfo.effectiveDeck);
-		generateFakeDeck(assists.first.character, lastChrs[2], assists.first.deck, loadedDecks[0][assists.first.character], tmp);
-		convertDeckToSokuFormat(tmp, assists.first.effectiveDeck);
-		generateFakeDeck(assists.second.character, lastChrs[3], assists.second.deck, loadedDecks[1][assists.second.character], tmp);
-		convertDeckToSokuFormat(tmp, assists.second.effectiveDeck);
+		generateFakeDeck(SokuLib::leftChar, lastChrs[0], selectedDecks[0], loadedDecks[0][SokuLib::leftChar], fakeDeck[0]);
+		convertDeckToSokuFormat(fakeDeck[0], SokuLib::leftPlayerInfo.effectiveDeck);
+		generateFakeDeck(SokuLib::rightChar, lastChrs[1], selectedDecks[1], loadedDecks[1][SokuLib::rightChar], fakeDeck[1]);
+		convertDeckToSokuFormat(fakeDeck[1], SokuLib::rightPlayerInfo.effectiveDeck);
+		generateFakeDeck(assists.first.character, lastChrs[2], assists.first.deck, loadedDecks[0][assists.first.character], fakeDeck[2]);
+		convertDeckToSokuFormat(fakeDeck[2], assists.first.effectiveDeck);
+		generateFakeDeck(assists.second.character, lastChrs[3], assists.second.deck, loadedDecks[1][assists.second.character], fakeDeck[3]);
+		convertDeckToSokuFormat(fakeDeck[3], assists.second.effectiveDeck);
 	}
 }
 
@@ -2261,21 +2288,21 @@ void __fastcall updateCollisionBoxes(SokuLib::BattleManager *This)
 	speeds[1] += players[1]->additionalSpeed.x;
 	// P3 - P2
 	players[0] = SokuLib::v2::GameDataManager::instance->players[2];
-	if (players[0]->renderInfos.yRotation == 0) {
+	if (players[0]->renderInfos.yRotation == 0 && players[0]->HP != 0) {
 		fct(This);
 		speeds[2] += players[0]->additionalSpeed.x;
 		speeds[1] += players[1]->additionalSpeed.x;
 	}
 	// P3 - P4
 	players[1] = SokuLib::v2::GameDataManager::instance->players[3];
-	if (players[0]->renderInfos.yRotation == 0 && players[1]->renderInfos.yRotation == 0) {
+	if (players[0]->renderInfos.yRotation == 0 && players[1]->renderInfos.yRotation == 0 && players[0]->HP != 0 && players[1]->HP != 0) {
 		fct(This);
 		speeds[2] += players[0]->additionalSpeed.x;
 		speeds[3] += players[1]->additionalSpeed.x;
 	}
 	// P1 - P4
 	players[0] = SokuLib::v2::GameDataManager::instance->players[0];
-	if (players[1]->renderInfos.yRotation == 0) {
+	if (players[1]->renderInfos.yRotation == 0 && players[1]->HP != 0) {
 		fct(This);
 		speeds[0] += players[0]->additionalSpeed.x;
 		speeds[3] += players[1]->additionalSpeed.x;
@@ -2849,6 +2876,8 @@ void selectConstructCommon(SokuLib::Select *This)
 		This->designBase3.getById(&dat.cursor,      400 + i + 2);
 		This->designBase3.getById(&dat.deckSelect,  320 + i + 2);
 		This->designBase3.getById(&dat.colorSelect, 310 + i + 2);
+		This->leftDeckInput.maxValue = 4;
+		This->rightDeckInput.maxValue = 4;
 		dat.baseNameY = dat.name2->y2;
 		dat.cursor->active = true;
 		dat.deckSelect->active = true;
@@ -3149,6 +3178,7 @@ void __fastcall chrSelectLastStep(SokuLib::v2::AnimationObject &obj, SokuLib::Ke
 	if (state != 3)
 		return;
 	if (inputHandler.input.a == 1) {
+		chrSelectExtra[index].cursorCounter = 60;
 		SokuLib::playSEWaveBuffer(0x28);
 		state = 4;
 		obj.setAction(1);
@@ -3156,6 +3186,7 @@ void __fastcall chrSelectLastStep(SokuLib::v2::AnimationObject &obj, SokuLib::Ke
 		return;
 	}
 	if (inputHandler.input.d == 1) {
+		chrSelectExtra[index].cursorCounter = 60;
 		SokuLib::playSEWaveBuffer(0x28);
 		state = 4;
 		obj.setAction(1);
@@ -3181,6 +3212,8 @@ void __fastcall updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 	auto *input = (&This->leftKeys)[i];
 	auto &info = (&assists.first)[i];
 
+	This->leftDeckInput.maxValue = 4;
+	This->rightDeckInput.maxValue = 4;
 	if (!input)
 		return;
 	//if (dat.chrHandler.pos == (&This->leftCharInput)[i].pos)
@@ -4469,6 +4502,10 @@ bool initStartingKeys(SokuLib::v2::Player * const assist)
 		else
 			assist->inputData.keyInput.d = 0;
 
+		if (assist->inputData.keyInput.d == 0) {
+			assist->inputData.keyInput.verticalAxis = 0;
+			assist->inputData.keyInput.horizontalAxis = 0;
+		}
 		assist->inputData.keyInput.a = 0;
 		assist->inputData.keyInput.b = 0;
 		assist->inputData.keyInput.c = 0;
@@ -4963,6 +5000,7 @@ void checkShock(SokuLib::v2::Player &chr, SokuLib::v2::Player &op, ChrInfo &info
 	else
 		chr.currentSpirit -= 200;
 	if (chr.isOnGround()) {
+		chr.gpShort[0] = 0;
 		chr.setAction(SokuLib::ACTION_SYSTEM_CARD);
 		chr.timeStop = 65;
 		chr.grabInvulTimer = 60;
@@ -4984,7 +5022,6 @@ void checkShock(SokuLib::v2::Player &chr, SokuLib::v2::Player &op, ChrInfo &info
 	chr.renderInfos.zRotation = 0;
 	chr.comboModifiers.chainArt = true;
 	chr.comboModifiers.chainSpell = true;
-	chr.dashTimer = 0;
 	SokuLib::camera.forceYCenter = false;
 	SokuLib::camera.forceXCenter = false;
 	SokuLib::camera.forceScale = false;
@@ -5031,8 +5068,8 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 				SokuLib::v2::GameDataManager::instance->players[2]->HP = 0;
 				SokuLib::v2::GameDataManager::instance->players[3]->HP = 0;
 			} else {
-				SokuLib::v2::GameDataManager::instance->players[2]->HP = SokuLib::v2::GameDataManager::instance->players[2]->MaxHP;
-				SokuLib::v2::GameDataManager::instance->players[3]->HP = SokuLib::v2::GameDataManager::instance->players[3]->MaxHP;
+				SokuLib::v2::GameDataManager::instance->players[2]->HP = SokuLib::v2::GameDataManager::instance->players[2]->maxHP;
+				SokuLib::v2::GameDataManager::instance->players[3]->HP = SokuLib::v2::GameDataManager::instance->players[3]->maxHP;
 			}
 		}
 		SokuLib::camera.p1X = &SokuLib::v2::GameDataManager::instance->players[0]->position.x;
@@ -5431,7 +5468,7 @@ void __declspec(naked) getCharacterIndexResetHealth_hook()
 	}
 }
 
-int parseExtraChrsGameMatch(SokuLib::PlayerMatchData *ptr)
+void *parseExtraChrsGameMatch(SokuLib::PlayerMatchData *ptr)
 {
 	auto *infos = &assists.first;
 
@@ -5442,7 +5479,27 @@ int parseExtraChrsGameMatch(SokuLib::PlayerMatchData *ptr)
 		for (unsigned i = 0; i < ptr->deckSize; i++)
 			infos->effectiveDeck.push_back(ptr->cards[i]);
 		netplayDeck.second = infos->effectiveDeck;
+		return ptr->getEndPtr() + 4;
+	} else if (SokuLib::mainMode == SokuLib::BATTLE_MODE_VSSERVER) {
+		infos->character = static_cast<SokuLib::Character>(ptr->character);
+		infos->palette = ptr->skinId;
+		infos->deck = ptr->deckId;
+		infos->effectiveDeck.clear();
+		for (unsigned i = 0; i < ptr->deckSize; i++)
+			infos->effectiveDeck.push_back(ptr->cards[i]);
 		ptr = reinterpret_cast<SokuLib::PlayerMatchData *>(ptr->getEndPtr());
+		infos++;
+		infos->character = static_cast<SokuLib::Character>(ptr->character);
+		infos->palette = ptr->skinId;
+		infos->deck = ptr->deckId;
+
+		auto p = ptr->getEndPtr();
+
+		loadouts[0] = p[0];
+		loadouts[1] = p[1];
+		loadouts[2] = p[2];
+		loadouts[3] = p[3];
+		return p + 4;
 	} else {
 		for (int j = 0; j < 2; j++) {
 			infos->character = static_cast<SokuLib::Character>(ptr->character);
@@ -5461,8 +5518,8 @@ int parseExtraChrsGameMatch(SokuLib::PlayerMatchData *ptr)
 		loadouts[1] = p[1];
 		loadouts[2] = p[2];
 		loadouts[3] = p[3];
+		return p + 4;
 	}
-	return (int)ptr + 4;
 }
 
 void __declspec(naked) parseExtraChrsGameMatch_hook()
@@ -5531,14 +5588,13 @@ void __declspec(naked) addExtraChrsGameMatch_hook()
 int (__stdcall *og_recvfrom)(SOCKET s, char * buf, int len, int flags, sockaddr * from, int * fromlen);
 int (__stdcall *og_sendto)(SOCKET s, char * buf, int len, int flags, sockaddr * to, int tolen);
 
+std::mutex m;
 int __stdcall my_recvfrom(SOCKET s, char * buf, int len, int flags, sockaddr * from, int * fromlen)
 {
 	int ret = og_recvfrom(s, buf, len, flags, from, fromlen);
 	auto packet = (SokuLib::Packet *)buf;
 
-#ifdef _DEBUG
 	displayPacket(packet, "RECV: ");
-#endif
 	if (SokuLib::mainMode != SokuLib::BATTLE_MODE_VSSERVER)
 		return ret;
 	if (packet->type != SokuLib::CLIENT_GAME && packet->type != SokuLib::HOST_GAME)
@@ -5553,11 +5609,31 @@ int __stdcall my_recvfrom(SOCKET s, char * buf, int len, int flags, sockaddr * f
 
 int __stdcall my_sendto(SOCKET s, char * buf, int len, int flags, sockaddr * to, int tolen)
 {
-#ifdef _DEBUG
-	auto packet = (SokuLib::Packet *)buf;
+	auto packet = reinterpret_cast<SokuLib::Packet *>(buf);
 
+	if (SokuLib::mainMode == SokuLib::BATTLE_MODE_VSWATCH) {
+		displayPacket(packet, "SEND: ");
+		return og_sendto(s, buf, len, flags, to, tolen);
+	}
+	if (packet->type != SokuLib::CLIENT_GAME && packet->type != SokuLib::HOST_GAME) {
+		displayPacket(packet, "SEND: ");
+		return og_sendto(s, buf, len, flags, to, tolen);
+	}
+
+	bool needDelete = false;
+
+	if (packet->game.event.type == SokuLib::GAME_MATCH) {
+		auto pack = reinterpret_cast<PacketGameMatchEvent *>(buf);
+		auto index = (SokuLib::mainMode == SokuLib::BATTLE_MODE_VSCLIENT ? 0 : 1);
+
+		generateFakeDecks();
+		for (; index < 2; index += 2)
+			if (fakeDeck[index])
+				memcpy(pack->operator[](index).cards, fakeDeck[index]->data(), fakeDeck[index]->size() * sizeof(*fakeDeck[index]->data()));
+			else //We just send an invalid deck over if we want no decks
+				memset(pack->operator[](index).cards, 0, 40);
+	}
 	displayPacket(packet, "SEND: ");
-#endif
 	return og_sendto(s, buf, len, flags, to, tolen);
 }
 
@@ -5627,14 +5703,15 @@ const double profileNameRightX = 640 - profileNameLeftX;
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
 	DWORD old;
 
-#ifdef _DEBUG
+//#ifdef _DEBUG
 	FILE *_;
 
 	AllocConsole();
 	freopen_s(&_, "CONOUT$", "w", stdout);
 	freopen_s(&_, "CONOUT$", "w", stderr);
-#endif
+//#endif
 
+	random.seed(time(nullptr));
 	if (!initGR())
 		return false;
 #ifdef _DEBUG
@@ -5841,6 +5918,7 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	memset((void *)0x420669, 0x90, 0x12);
 	memset((void *)0x42078C, 0x90, 0xF);
 	*(void **)0x42094C = chrSelectLastStep_hook;
+	*(char *)0x420751 = 5;
 	SokuLib::TamperNearJmpOpr(0x4204F6, chrSelectExtraSteps_hook);
 
 	memset((void *)0x42081E, 0x90, 0x42085F - 0x42081E);
