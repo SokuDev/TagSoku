@@ -5552,7 +5552,6 @@ const void *parseExtraChrsGameMatch(SokuLib::PlayerMatchData *ptr)
 			for (unsigned i = 0; i < ptr->deckSize; i++)
 				infos->effectiveDeck.push_back(ptr->cards[i]);
 			netplayDeck[2 + j] = infos->effectiveDeck;
-			std::cout << std::endl;
 			ptr = reinterpret_cast<SokuLib::PlayerMatchData *>(ptr->getEndPtr());
 			infos++;
 		}
@@ -5795,13 +5794,13 @@ void __declspec(naked) fixupSanaeSuwakoCrossDisabled()
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
 	DWORD old;
 
-//#ifdef _DEBUG
+#ifdef _DEBUG
 	FILE *_;
 
 	AllocConsole();
 	freopen_s(&_, "CONOUT$", "w", stdout);
 	freopen_s(&_, "CONOUT$", "w", stderr);
-//#endif
+#endif
 
 	random.seed(time(nullptr));
 	if (!initGR())
