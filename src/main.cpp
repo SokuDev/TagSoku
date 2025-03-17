@@ -623,7 +623,7 @@ static std::map<unsigned char, unsigned> nbSkills{
 	{ SokuLib::CHARACTER_SUWAKO, 12 }
 };
 
-std::pair<SokuLib::Deque<unsigned short>, SokuLib::Deque<unsigned short>> netplayDeck;
+std::array<SokuLib::Deque<unsigned short>, 4> netplayDeck;
 static std::pair<SokuLib::PlayerInfo, SokuLib::PlayerInfo> assists = {
 	SokuLib::PlayerInfo{SokuLib::CHARACTER_CIRNO, 0, 0, 0, 0, {}, nullptr},
 	SokuLib::PlayerInfo{SokuLib::CHARACTER_MARISA, 1, 0, 0, 0, {}, nullptr}
@@ -824,6 +824,11 @@ void loadSoku2Config()
 		loadSoku2CSV(module_path);
 		return;
 	}
+}
+
+void generateClientDecks(SokuLib::NetObject &obj)
+{
+	obj.playerData[1].cards = netplayDeck[1];
 }
 
 static void drawBox(const SokuLib::Box &box, const SokuLib::RotationBox *rotation, SokuLib::Color borderColor, SokuLib::Color fillColor)
@@ -1657,11 +1662,13 @@ void generateFakeDecks(SokuLib::Character c1, SokuLib::Character c2)
 
 	if (!generated || generatedC.first != c1) {
 		generateFakeDeck(c1, lastChrs[1], selectedDecks[1], loadedDecks[0][c1], fakeDeck[1]);
+		convertDeckToSokuFormat(fakeDeck[1], netplayDeck[1]);
 		convertDeckToSokuFormat(fakeDeck[1], SokuLib::rightPlayerInfo.effectiveDeck);
+		generateClientDecks(SokuLib::getNetObject());
 	}
 	if (!generated || generatedC.second != c2) {
 		generateFakeDeck(c2, lastChrs[3], assists.second.deck, loadedDecks[0][c2], fakeDeck[3]);
-		convertDeckToSokuFormat(fakeDeck[3], netplayDeck.second);
+		convertDeckToSokuFormat(fakeDeck[3], netplayDeck[3]);
 		convertDeckToSokuFormat(fakeDeck[3], assists.second.effectiveDeck);
 	}
 	generated = true;
@@ -1677,17 +1684,18 @@ void generateFakeDecks()
 
 	if (SokuLib::mainMode == SokuLib::BATTLE_MODE_VSSERVER) {
 		generateFakeDeck(SokuLib::rightChar, lastChrs[1], selectedDecks[1], loadedDecks[0][SokuLib::rightChar], fakeDeck[1]);
-		convertDeckToSokuFormat(fakeDeck[1], netplayDeck.first);
+		convertDeckToSokuFormat(fakeDeck[1], netplayDeck[1]);
 		convertDeckToSokuFormat(fakeDeck[1], SokuLib::rightPlayerInfo.effectiveDeck);
 		generateFakeDeck(assists.second.character, lastChrs[3], assists.second.deck, loadedDecks[0][assists.second.character], fakeDeck[3]);
-		convertDeckToSokuFormat(fakeDeck[3], netplayDeck.second);
+		convertDeckToSokuFormat(fakeDeck[3], netplayDeck[3]);
 		convertDeckToSokuFormat(fakeDeck[3], assists.second.effectiveDeck);
 		generatedC = {SokuLib::rightChar, assists.second.character};
 	} else if (SokuLib::mainMode == SokuLib::BATTLE_MODE_VSCLIENT) {
 		generateFakeDeck(SokuLib::leftChar, lastChrs[0], selectedDecks[0], loadedDecks[0][SokuLib::leftChar], fakeDeck[0]);
+		convertDeckToSokuFormat(fakeDeck[0], netplayDeck[0]);
 		convertDeckToSokuFormat(fakeDeck[0], SokuLib::leftPlayerInfo.effectiveDeck);
 		generateFakeDeck(assists.first.character, lastChrs[2], assists.first.deck, loadedDecks[0][assists.first.character], fakeDeck[2]);
-		convertDeckToSokuFormat(fakeDeck[2], netplayDeck.first);
+		convertDeckToSokuFormat(fakeDeck[2], netplayDeck[2]);
 		convertDeckToSokuFormat(fakeDeck[2], assists.first.effectiveDeck);
 		generatedC = {SokuLib::leftChar, assists.first.character};
 	} else {
@@ -5498,9 +5506,10 @@ void __declspec(naked) getCharacterIndexResetHealth_hook()
 	}
 }
 
-void *parseExtraChrsGameMatch(SokuLib::PlayerMatchData *ptr)
+const void *parseExtraChrsGameMatch(SokuLib::PlayerMatchData *ptr)
 {
 	auto *infos = &assists.first;
+	const unsigned char *ret;
 
 	if (SokuLib::mainMode == SokuLib::BATTLE_MODE_VSCLIENT) {
 		infos++;
@@ -5508,8 +5517,8 @@ void *parseExtraChrsGameMatch(SokuLib::PlayerMatchData *ptr)
 		infos->effectiveDeck.clear();
 		for (unsigned i = 0; i < ptr->deckSize; i++)
 			infos->effectiveDeck.push_back(ptr->cards[i]);
-		netplayDeck.second = infos->effectiveDeck;
-		return ptr->getEndPtr() + 4;
+		netplayDeck[3] = infos->effectiveDeck;
+		ret = ptr->getEndPtr();
 	} else if (SokuLib::mainMode == SokuLib::BATTLE_MODE_VSSERVER) {
 		infos->character = static_cast<SokuLib::Character>(ptr->character);
 		infos->palette = ptr->skinId;
@@ -5517,19 +5526,18 @@ void *parseExtraChrsGameMatch(SokuLib::PlayerMatchData *ptr)
 		infos->effectiveDeck.clear();
 		for (unsigned i = 0; i < ptr->deckSize; i++)
 			infos->effectiveDeck.push_back(ptr->cards[i]);
+		netplayDeck[2] = infos->effectiveDeck;
 		ptr = reinterpret_cast<SokuLib::PlayerMatchData *>(ptr->getEndPtr());
 		infos++;
 		infos->character = static_cast<SokuLib::Character>(ptr->character);
 		infos->palette = ptr->skinId;
 		infos->deck = ptr->deckId;
 
-		auto p = ptr->getEndPtr();
-
-		loadouts[0] = p[0];
-		loadouts[1] = p[1];
-		loadouts[2] = p[2];
-		loadouts[3] = p[3];
-		return p + 4;
+		ret = ptr->getEndPtr();
+		loadouts[0] = ret[0];
+		loadouts[1] = ret[1];
+		loadouts[2] = ret[2];
+		loadouts[3] = ret[3];
 	} else {
 		for (int j = 0; j < 2; j++) {
 			infos->character = static_cast<SokuLib::Character>(ptr->character);
@@ -5538,18 +5546,19 @@ void *parseExtraChrsGameMatch(SokuLib::PlayerMatchData *ptr)
 			infos->effectiveDeck.clear();
 			for (unsigned i = 0; i < ptr->deckSize; i++)
 				infos->effectiveDeck.push_back(ptr->cards[i]);
+			netplayDeck[2 + j] = infos->effectiveDeck;
+			std::cout << std::endl;
 			ptr = reinterpret_cast<SokuLib::PlayerMatchData *>(ptr->getEndPtr());
 			infos++;
 		}
 
-		auto p = reinterpret_cast<uint8_t *>(ptr);
-
-		loadouts[0] = p[0];
-		loadouts[1] = p[1];
-		loadouts[2] = p[2];
-		loadouts[3] = p[3];
-		return p + 4;
+		ret = reinterpret_cast<uint8_t *>(ptr);
+		loadouts[0] = ret[0];
+		loadouts[1] = ret[1];
+		loadouts[2] = ret[2];
+		loadouts[3] = ret[3];
 	}
+	return ret + 4;
 }
 
 void __declspec(naked) parseExtraChrsGameMatch_hook()
@@ -5569,16 +5578,8 @@ void *__fastcall addExtraChrsGameMatch(void *packet)
 {
 	auto data = reinterpret_cast<SokuLib::PlayerMatchData *>(packet);
 	auto *infos = &assists.first;
-	auto *deck = &netplayDeck.first;
+	auto *deck = &netplayDeck[2];
 
-	//if (SokuLib::mainMode == SokuLib::BATTLE_MODE_VSSERVER && SokuLib::sceneId == SokuLib::SCENE_SELECTCL) {
-	//	data->deckSize = 0;
-	//	data = reinterpret_cast<SokuLib::PlayerMatchData *>(data->getEndPtr());
-	//	data->deckSize = netplayDeck.second.size();
-	//	for (unsigned i = 0; i < data->deckSize; i++)
-	//		data->cards[i] = netplayDeck.second[i];
-	//	data = reinterpret_cast<SokuLib::PlayerMatchData *>(data->getEndPtr());
-	//} else {
 	for (int j = 0; j < 2; j++) {
 		data->character = static_cast<SokuLib::CharacterPacked>(infos->character);
 		data->skinId = infos->palette;
@@ -5665,11 +5666,6 @@ int __stdcall my_sendto(SOCKET s, char * buf, int len, int flags, sockaddr * to,
 	}
 	displayPacket(packet, "SEND: ");
 	return og_sendto(s, buf, len, flags, to, tolen);
-}
-
-void generateClientDecks(SokuLib::NetObject &obj)
-{
-	obj.playerData[1].cards = netplayDeck.first;
 }
 
 void onMeterGained(SokuLib::v2::Player *player, int meter)
