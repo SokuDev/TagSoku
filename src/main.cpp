@@ -2600,8 +2600,10 @@ void initHudRender(SokuLib::v2::InfoManager *hud, UnderObjects *p1)
 		memset((void *)0x47DBE7, 0x90, 19);
 	} else {
 		for (int i = 0; i < 5; i++) {
-			p1[0].cardSlots[i]->active = hud->playerHUD[0].player->handInfo.hand.size() > i;
-			p1[0].cardGages[i]->active = true;
+			auto size = hud->playerHUD[0].player->deckInfo.queue.size() + hud->playerHUD[0].player->handInfo.hand.size();
+
+			p1[0].cardSlots[i]->active = size > i;
+			p1[0].cardGages[i]->active = size > i;
 		}
 		p1[0].underObj->active = true;
 		hud->playerHUD[0].lifebarRed->gauge.heightRatio = 1;
@@ -2613,8 +2615,10 @@ void initHudRender(SokuLib::v2::InfoManager *hud, UnderObjects *p1)
 		memset((void *)0x47DBFA, 0x90, 19);
 	} else {
 		for (int i = 0; i < 5; i++) {
-			p1[1].cardSlots[i]->active = hud->playerHUD[1].player->handInfo.hand.size() > i;
-			p1[1].cardGages[i]->active = true;
+			auto size = hud->playerHUD[1].player->deckInfo.queue.size() + hud->playerHUD[1].player->handInfo.hand.size();
+
+			p1[1].cardSlots[i]->active = size > i;
+			p1[1].cardGages[i]->active = size > i;
 		}
 		p1[1].underObj->active = true;
 	}
@@ -2634,7 +2638,7 @@ void restoreHudRender(SokuLib::v2::InfoManager *hud, UnderObjects *p1)
 void displayCard(SokuLib::v2::Player *mgr, unsigned shown, unsigned meter, bool side, unsigned cardId)
 {
 	shown -= mgr->weatherId == SokuLib::WEATHER_CLOUDY;
-	for (int j = 0; j < min(5, mgr->deckInfo.queue.size()); j++) {
+	for (int j = 0; j < 5; j++) {
 		sidedSetPos(side, cardHolder, 4 + j * 22, 70);
 		cardHolder.draw();
 	}
@@ -2661,8 +2665,8 @@ void displayCard(SokuLib::v2::Player *mgr, unsigned shown, unsigned meter, bool 
 		if (shown * ASSIST_CARD_METER <= meter) {
 			setRenderMode(2);
 			for (int k = 0; k < shown; k++) {
-				sidedSetPos(side, highlight[highlightAnimation[2]], k * 22 - 1, 53);
-				highlight[highlightAnimation[2]].draw();
+				sidedSetPos(side, highlight[highlightAnimation[2 + side]], k * 22 - 1, 53);
+				highlight[highlightAnimation[2 + side]].draw();
 			}
 			setRenderMode(1);
 		}
@@ -2753,7 +2757,8 @@ int __fastcall onHudRender(SokuLib::v2::InfoManager *This)
 
 		if (
 			player->handInfo.hand.size() >= cost &&
-			player->weatherId != SokuLib::WEATHER_MOUNTAIN_VAPOR
+			player->weatherId != SokuLib::WEATHER_MOUNTAIN_VAPOR &&
+			player->handInfo.hand[0].cost
 		) {
 			setRenderMode(2);
 			bigHighlight[highlightAnimation[i]].setPosition(pos[0]);
@@ -5726,6 +5731,67 @@ const double profileNameY = 57;
 const double profileNameLeftX = 186;
 const double profileNameRightX = 640 - profileNameLeftX;
 
+const float sanaeKanakoLeftGui = 96;      // (+40)
+const float sanaeKanakoRightGui = 544;    // (-40)
+const float sanaeKanakoTopGui = 366;      // (+10)
+const float sanaeKanakoLeftBarGui = 122;  // (+40)
+const float sanaeKanakoRightBarGui = 518; // (-40)
+const float sanaeKanakoTopBarGui = 412;   // (+10)
+
+const float sanaeSuwakoLeftGui = 162;     // (+10)
+const float sanaeSuwakoRightGui = 478;    // (-10)
+const float sanaeSuwakoLeftBarGui = 187;  // (+10)
+const float sanaeSuwakoRightBarGui = 453; // (-10)
+
+unsigned fixupSanaeKanakoCross_ret = 0x76067D;
+void __declspec(naked) fixupSanaeKanakoCross()
+{
+	__asm {
+		FLD        dword ptr [sanaeKanakoLeftBarGui]
+		FSTP       dword ptr [ESI + 0xEC]
+		FLD        dword ptr [sanaeKanakoTopBarGui]
+		FSTP       dword ptr [ESI + 0xF0]
+		JMP        [fixupSanaeKanakoCross_ret]
+	}
+}
+
+unsigned fixupSanaeSuwakoBar_ret = 0x760361;
+void __declspec(naked) fixupSanaeSuwakoBar()
+{
+	__asm {
+		FLD        dword ptr [sanaeSuwakoLeftBarGui]
+		FSTP       dword ptr [ESI + 0xEC]
+		MOV        EAX, 0x85EEE8
+		FLD        dword ptr [EAX]
+		FSTP       dword ptr [ESI + 0xF0]
+		JMP        [fixupSanaeSuwakoBar_ret]
+	}
+}
+
+unsigned fixupSanaeSuwakoBarDisabled_ret = 0x7604AE;
+void __declspec(naked) fixupSanaeSuwakoBarDisabled()
+{
+	__asm {
+		MOV        EAX, 0x85EEE8
+		FLD        dword ptr [EAX]
+		FSTP       dword ptr [ESI + 0xF0]
+		JMP        [fixupSanaeSuwakoBarDisabled_ret]
+	}
+}
+
+unsigned fixupSanaeSuwakoCrossDisabled_ret = 0x76062C;
+void __declspec(naked) fixupSanaeSuwakoCrossDisabled()
+{
+	__asm {
+		FLD        dword ptr [sanaeSuwakoRightBarGui]
+		FSTP       dword ptr [ESI + 0xEC]
+		MOV        EAX, 0x85EEE8
+		FLD        dword ptr [EAX]
+		FSTP       dword ptr [ESI + 0xF0]
+		JMP        [fixupSanaeSuwakoCrossDisabled_ret]
+	}
+}
+
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
 	DWORD old;
 
@@ -5801,6 +5867,41 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	*(const double **)0x47DA96 = &profileNameY;
 	*(const double **)0x47DB84 = &profileNameRightX;
 	*(const double **)0x47DAC5 = &profileNameRightX;
+
+	// Sanae GUI fix
+	// Kanako portrait
+	*(const float **)0x7602BF = &sanaeKanakoLeftGui;
+	*(const float **)0x7602CB = &sanaeKanakoTopGui;
+	*(const float **)0x7602E0 = &sanaeKanakoRightGui;
+	*(const float **)0x7602EC = &sanaeKanakoTopGui;
+	// Kanako enabled bar
+	*(const float **)0x7603E5 = &sanaeKanakoLeftBarGui;
+	*(const float **)0x7603F1 = &sanaeKanakoTopBarGui;
+	*(const float **)0x760409 = &sanaeKanakoRightBarGui;
+	*(const float **)0x760415 = &sanaeKanakoTopBarGui;
+	// Kanako disabled bar
+	*(const float **)0x760498 = &sanaeKanakoLeftBarGui;
+	*(const float **)0x7604A4 = &sanaeKanakoTopBarGui;
+	*(const float **)0x7604BC = &sanaeKanakoRightBarGui;
+	*(const float **)0x7604C8 = &sanaeKanakoTopBarGui;
+	// Kanako disabled cross
+	SokuLib::TamperNearJmp(0x76060C, fixupSanaeKanakoCross);
+	*(const float **)0x760616 = &sanaeKanakoRightBarGui;
+	*(const float **)0x760622 = &sanaeKanakoTopBarGui;
+	// Suwako bars
+	SokuLib::TamperNearJmp(0x760508, fixupSanaeSuwakoBar);
+	// Suwako portrait
+	*(const float **)0x76034B = &sanaeSuwakoLeftGui;
+	*(const float **)0x76036C = &sanaeSuwakoRightGui;
+	// Suwako enabled bar
+	*(const float **)0x760515 = &sanaeSuwakoRightBarGui;
+	// Suwako disabled bar
+	*(const float **)0x7605A4 = &sanaeSuwakoLeftBarGui;
+	*(const float **)0x7605AF = &sanaeSuwakoRightBarGui;
+	SokuLib::TamperNearJmp(0x7605A8, fixupSanaeSuwakoBarDisabled);
+	// Suwako disabled cross
+	*(const float **)0x760667 = &sanaeSuwakoLeftBarGui;
+	SokuLib::TamperNearJmp(0x760686, fixupSanaeSuwakoCrossDisabled);
 
 	*(char *)0x4552C2 = 0x56;
 	SokuLib::TamperNearCall(0x4552C3, generateClientDecks);
