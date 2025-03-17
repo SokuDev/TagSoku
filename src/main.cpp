@@ -629,7 +629,7 @@ static std::pair<SokuLib::PlayerInfo, SokuLib::PlayerInfo> assists = {
 	SokuLib::PlayerInfo{SokuLib::CHARACTER_MARISA, 1, 0, 0, 0, {}, nullptr}
 };
 static void (*og_loadDat)(const char *path);
-static std::map<unsigned, std::array<std::array<unsigned, 4>, 3>> loadedLoadouts;
+static std::map<unsigned, std::array<std::array<unsigned, 5>, 3>> loadedLoadouts;
 static std::mt19937 random;
 
 #ifdef _DEBUG
@@ -1996,19 +1996,40 @@ void renderLoadout(SokuLib::Character chr, unsigned select, SokuLib::Vector2i po
 			else
 				sprite.setSize({20, 32});
 			sprite.setRotation(-M_PI / 6);
-			sprite.rect.top = sprite.rect.width = 0;
+			sprite.rect.top = sprite.rect.left = 0;
 			sprite.rect.width = sprite.texture.getSize().x;
 			sprite.rect.height = sprite.texture.getSize().y;
 			sprite.tint = SokuLib::Color::Black;
 			if (i != select)
 				sprite.tint.a = 0x80;
 			sprite.draw();
+
 			sprite.setPosition(pos);
 			sprite.tint = SokuLib::Color::White;
 			if (i != select)
 				sprite.tint.a = 0x80;
 			sprite.draw();
 			sprite.setRotation(0);
+
+			if (cardId >= 200) {
+				SokuLib::DrawUtils::Sprite &costSprite = cardBlank[it->second[i][4] - 1];
+
+				costSprite.setPosition(pos);
+				if (j == 0)
+					costSprite.setSize({30, 48});
+				else
+					costSprite.setSize({20, 32});
+				costSprite.setRotation(-M_PI / 6);
+				costSprite.rect.top = costSprite.rect.left = 0;
+				costSprite.rect.width = costSprite.texture.getSize().x;
+				costSprite.rect.height = costSprite.texture.getSize().y;
+				costSprite.tint = SokuLib::Color::White;
+				if (i != select)
+					costSprite.tint.a = 0x80;
+				costSprite.draw();
+				costSprite.setRotation(0);
+			}
+
 		}
 		pos.x -= 15;
 		pos.y += 40;
@@ -2644,6 +2665,7 @@ void displayCard(SokuLib::v2::Player *mgr, unsigned shown, unsigned meter, bool 
 
 	auto chr = cardId < 100 ? SokuLib::CHARACTER_RANDOM : mgr->characterIndex;
 	auto &texture = cardsTextures[chr][cardId];
+	auto &texture2 = cardBlank[shown - 1];
 
 	texture.setSize({20, 30});
 	texture.setRotation(M_PI / 6 * (side ? 1 : -1));
@@ -2657,6 +2679,14 @@ void displayCard(SokuLib::v2::Player *mgr, unsigned shown, unsigned meter, bool 
 	sidedSetPos(side, texture, 9 + 5 * 22, 72);
 	texture.tint = SokuLib::Color::White;
 	texture.draw();
+	texture.setRotation(0);
+
+	texture2.setSize({20, 30});
+	texture2.setRotation(M_PI / 6 * (side ? 1 : -1));
+	sidedSetPos(side, texture2, 9 + 5 * 22, 72);
+	texture2.tint = SokuLib::Color::White;
+	texture2.draw();
+	texture2.setRotation(0);
 }
 
 int __fastcall onHudRender(SokuLib::v2::InfoManager *This)
