@@ -34,13 +34,13 @@
     },
     "8c": {
         "ground": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 505,
             "offsetX": -50
         },
         "air": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 505,
             "offsetX": -50,

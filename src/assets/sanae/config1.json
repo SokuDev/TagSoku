@@ -39,14 +39,14 @@
     },
     "8c": {
         "ground": {
-            "cd": 300,
+            "cd": 150,
             "nb": 1,
             "action": 510,
             "offsetX": -50,
             "cond": "end"
         },
         "air": {
-            "cd": 300,
+            "cd": 150,
             "nb": 1,
             "action": 510,
             "posY": 0,

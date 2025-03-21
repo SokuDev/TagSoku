@@ -4,13 +4,13 @@
 
     "8a": {
         "ground": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 540,
             "offsetX": -50
         },
         "air": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 542,
             "offsetX": -50,
@@ -20,13 +20,13 @@
     },
     "8b": {
         "ground": {
-            "cd": 300,
+            "cd": 210,
             "nb": 1,
             "action": 525,
             "offsetX": -50
         },
         "air": {
-            "cd": 300,
+            "cd": 210,
             "nb": 1,
             "action": 525,
             "offsetX": -50,

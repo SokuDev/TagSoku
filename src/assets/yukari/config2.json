@@ -19,13 +19,13 @@
     },
     "8b": {
         "ground": {
-            "cd": 300,
+            "cd": 360,
             "nb": 1,
             "action": 560,
             "offsetX": -50
         },
         "air": {
-            "cd": 300,
+            "cd": 360,
             "nb": 1,
             "action": 560,
             "offsetX": -50,

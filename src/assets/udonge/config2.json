@@ -19,14 +19,14 @@
     },
     "8b": {
         "ground": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 510,
             "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
             "offsetX": -50
         },
         "air": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 510,
             "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
@@ -36,13 +36,13 @@
     },
     "8c": {
         "ground": {
-            "cd": 300,
+            "cd": 270,
             "nb": 1,
             "action": 530,
             "offsetX": -50
         },
         "air": {
-            "cd": 300,
+            "cd": 270,
             "nb": 1,
             "action": 532,
             "offsetX": -50,

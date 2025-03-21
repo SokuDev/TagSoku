@@ -4,7 +4,7 @@
 
     "8a": {
         "ground": {
-            "cd": 300,
+            "cd": 270,
             "nb": 1,
             "action": 510,
             "recovery": 10,
@@ -13,7 +13,7 @@
             "cond": "end"
         },
         "air": {
-            "cd": 300,
+            "cd": 270,
             "nb": 1,
             "action": 510,
             "posY": 0,
@@ -24,14 +24,14 @@
     },
     "8b": {
         "ground": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 565,
             "offsetX": -50,
             "cond": "end"
         },
         "air": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 565,
             "posY": 0,

@@ -19,12 +19,12 @@
     },
     "8b": {
         "ground": {
-            "cd": 450,
+            "cd": 210,
             "nb": 1,
             "action": 570
         },
         "air": {
-            "cd": 450,
+            "cd": 210,
             "nb": 1,
             "action": 570,
             "posY": 0,
@@ -34,14 +34,14 @@
     },
     "8c": {
         "ground": {
-            "cd": 300,
+            "cd": 120,
             "nb": 1,
             "action": 510,
             "offsetX": 0,
             "recovery": 300
         },
         "air": {
-            "cd": 300,
+            "cd": 120,
             "nb": 1,
             "action": 510,
             "posY": 0,

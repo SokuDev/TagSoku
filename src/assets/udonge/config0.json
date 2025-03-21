@@ -34,14 +34,14 @@
     },
     "8c": {
         "ground": {
-            "cd": 300,
+            "cd": 150,
             "nb": 1,
             "action": 525,
             "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
             "offsetX": -50
         },
         "air": {
-            "cd": 300,
+            "cd": 150,
             "nb": 1,
             "action": 525,
             "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],

@@ -4,7 +4,7 @@
 
     "8a": {
         "ground": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 546,
             "offsetX": -50,
@@ -12,7 +12,7 @@
             "cond": "basic"
         },
         "air": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 546,
             "posY": 0,
@@ -23,13 +23,13 @@
     },
     "8b": {
         "ground": {
-            "cd": 225,
+            "cd": 210,
             "nb": 1,
             "action": 566,
             "offsetX": -50
         },
         "air": {
-            "cd": 225,
+            "cd": 210,
             "nb": 1,
             "action": 566,
             "offsetX": -50
@@ -37,13 +37,13 @@
     },
     "8c": {
         "ground": {
-            "cd": 225,
+            "cd": 210,
             "nb": 1,
             "action": 530,
             "posY": -100
         },
         "air": {
-            "cd": 225,
+            "cd": 210,
             "nb": 1,
             "action": 530,
             "speedY": 0,

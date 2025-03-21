@@ -4,13 +4,13 @@
 
     "8a": {
         "ground": {
-            "cd": 450,
+            "cd": 300,
             "nb": 1,
             "action": 540,
             "offsetX": -50
         },
         "air": {
-            "cd": 900,
+            "cd": 300,
             "nb": 1,
             "action": 540,
             "posY": 0,
@@ -19,13 +19,13 @@
     },
     "8b": {
         "ground": {
-            "cd": 450,
+            "cd": 60,
             "nb": 1,
             "action": 560,
             "offsetX": -50
         },
         "air": {
-            "cd": 450,
+            "cd": 60,
             "nb": 1,
             "action": 560,
             "posY": 0,
@@ -34,14 +34,14 @@
     },
     "8c": {
         "ground": {
-            "cd": 450,
+            "cd": 300,
             "nb": 1,
             "allowedKeys": [0, 0, 0, 0, 1, 0, 0, 0],
             "action": 511,
             "offsetX": 350
         },
         "air": {
-            "cd": 450,
+            "cd": 300,
             "nb": 1,
             "allowedKeys": [0, 0, 0, 0, 1, 0, 0, 0],
             "action": 513,

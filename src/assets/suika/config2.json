@@ -21,7 +21,7 @@
             "action": 510
         },
         "air": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 512,
             "recovery": 120
@@ -29,12 +29,12 @@
     },
     "8c": {
         "ground": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 550
         },
         "air": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 550,
             "posY": 0

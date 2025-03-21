@@ -25,7 +25,7 @@
     },
     "8b": {
         "ground": {
-            "cd": 300,
+            "cd": 210,
             "nb": 1,
             "action": 565,
             "gravityY": 0,
@@ -34,7 +34,7 @@
             "cond": "end"
         },
         "air": {
-            "cd": 300,
+            "cd": 210,
             "nb": 1,
             "action": 567,
             "gravityY": 0,
@@ -45,14 +45,14 @@
     },
     "8c": {
         "ground": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 500,
             "offsetX": -50,
             "cond": "end"
         },
         "air": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
             "action": 502,
             "gravityY": 0,
