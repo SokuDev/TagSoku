@@ -1,6 +1,6 @@
 {
     "spells": [201],
-    "shownCost": 3,
+    "shownCost": 4,
 
     "8a": {
         "ground": {
@@ -48,7 +48,7 @@
             "speedX": 0,
             "speedY": 0,
             "offsetX": 0,
-            "cost": 3,
+            "cost": 4,
             "cardName": 201,
             "cd": 300,
             "nb": 1,
@@ -59,7 +59,7 @@
             "speedY": 0,
             "gravityY": 0,
             "offsetX": 0,
-            "cost": 3,
+            "cost": 4,
             "cardName": 201,
             "cd": 300,
             "nb": 1,

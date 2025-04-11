@@ -4,23 +4,23 @@
 
     "8a": {
         "ground": {
-            "cd": 240,
+            "cd": 300,
             "nb": 1,
-            "action": 500,
+            "action": 525,
             "offsetX": -50,
-            "recovery": 60,
-            "cond": "basic"
+            "recovery": 10,
+            "cond": "end"
         },
         "air": {
-            "cd": 240,
+            "cd": 300,
             "nb": 1,
-            "action": 502,
-            "gravityY": 0,
+            "action": 527,
             "speedY": 0,
+            "gravityY": 0,
             "speedX": 3,
+            "recovery": 10,
             "offsetX": -50,
-            "recovery": 60,
-            "cond": "basic"
+            "cond": "end"
         }
     },
     "8b": {

@@ -64,7 +64,7 @@
         "ground": {
             "speedX": 0,
             "speedY": 0,
-            "offsetX": -50,
+            "offsetX": 150,
             "cost": 3,
             "cardName": 203,
             "cd": 300,
@@ -75,7 +75,7 @@
             "speedX": 0,
             "speedY": 0,
             "gravityY": 0,
-            "offsetX": -50,
+            "offsetX": 150,
             "offsetY": 0,
             "cost": 3,
             "cardName": 203,

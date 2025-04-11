@@ -27,6 +27,8 @@
 #define ASSIST_METER_CONVERSION 1
 #define SLOW_TAG_STARTUP 60
 #define TAG_CD 300
+#define CROSS_TAG_CD 900
+#define GROUND_TAG_CD 600
 #define SLOW_TAG_CD 900
 #define SLOW_TAG_COST 2
 #define FONT_HEIGHT 16
@@ -309,7 +311,7 @@ struct RivControl {
 
 static unsigned char versionMask[16] = {
 	0xB1, 0x62, 0x56, 0xD4, 0xDF, 0x68, 0x28, 0xA0,
-	0x1A, 0xEE, 0x14, 0x50, 0xCF, 0x7E, 0xC3, 0x57
+	0x1A, 0xEE, 0x14, 0x55, 0xCF, 0x7E, 0xC3, 0x57
 };
 static unsigned char (__fastcall *og_advanceFrame)(SokuLib::v2::Player *);
 static void (*s_originalDrawGradiantBar)(float param1, float param2, float param3);
@@ -403,6 +405,7 @@ struct ChrInfo {
 	bool ending = false;
 	bool ended = false;
 	bool callInit = true;
+	unsigned char activePose = 0;
 	unsigned tagAntiBuffer = 0;
 	unsigned startup = 0;
 	unsigned cutscene = 0;
@@ -453,6 +456,7 @@ struct ChrInfo {
 		this->cutscene = other.cutscene;
 		this->tagTimer = other.tagTimer;
 		this->tagAntiBuffer = other.tagAntiBuffer;
+		this->activePose = other.activePose;
 		this->nb = other.nb;
 		this->cd = other.cd;
 		this->ctr = other.ctr;
@@ -1043,7 +1047,7 @@ static void drawPlayerBoxes(const SokuLib::v2::Player &manager, bool playerBoxes
 		drawPositionBox(manager);
 	}
 
-	auto array = manager.objectList->getList();
+	auto &array = manager.objectList->getList();
 
 	for (const auto elem : array) {
 		if (elem->isActive && elem->collisionLimit != 0) {
@@ -1096,7 +1100,7 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 	if (chr.tagging) {
 		if (main->renderInfos.yRotation != 0) {
 			main->renderInfos.yRotation -= 10;
-		} else if (chr.deathTag && chr.tagTimer < 60) {
+		} else if (chr.deathTag) {
 			chr.tagTimer++;
 			if (
 				main->boxData.hitBoxCount != 0 &&
@@ -1106,15 +1110,35 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 					main->gameData.opponent->frameState.actionId >= SokuLib::ACTION_GRABBED
 				)
 			) {
-				float angle = std::atan2(main->gameData.opponent->position.y - main->position.y, main->gameData.opponent->position.x - main->position.x);
-
-				main->gameData.opponent->setAction(SokuLib::ACTION_AIR_HIT_CAN_WALL_SLAM);
-				main->gameData.opponent->speed.x = std::cos(angle) * 30 * main->gameData.opponent->direction;
-				main->gameData.opponent->speed.y = std::sin(angle) * 30 + 7.5;
+				chr.activePose = main->frameState.poseId;
+				main->gameData.opponent->checkTurnAround();
+				main->gameData.opponent->setAction(SokuLib::ACTION_AIR_HIT_BIG_HITSTUN4);
+				main->gameData.opponent->speed.x = -30;
+				main->gameData.opponent->speed.y = 0;
 				main->damageOpponent(0, 0, main->comboCount == 0, false);
-				main->gameData.opponent->untech = 9999;
+				if (main->gameData.opponent->isGrounded())
+					main->gameData.opponent->untech = 2;
+				else if (main->gameData.opponent->direction == SokuLib::LEFT)
+					main->gameData.opponent->untech = 2 + (1240 - main->gameData.opponent->position.x) / 30;
+				else
+					main->gameData.opponent->untech = 2 + (main->gameData.opponent->position.x - 40) / 30;
+				SokuLib::camera.forceXCenter = false;
+				SokuLib::camera.forceYCenter = false;
+				SokuLib::camera.forceScale = false;
 			}
-			main->timeStop = 2;
+			if (chr.activePose == 0)
+				main->timeStop = 2;
+			else if (main->gameData.opponent->frameState.actionId == SokuLib::ACTION_AIR_HIT_BIG_HITSTUN4) {
+				if (main->boxData.hitBoxCount == 0)
+					main->hitStop = 2;
+				if (main->gameData.opponent->position.y < 100 && chr.tagTimer % 6 == 0)
+					main->gameData.opponent->createEffect(
+						128,
+						main->gameData.opponent->position.x - main->gameData.opponent->direction * 50, 0,
+						-main->gameData.opponent->direction, 1
+					);
+			} else if (main->frameState.actionId != SokuLib::ACTION_BOMB)
+				chr.tagging = false;
 			main->projectileInvulTimer = 2;
 			main->grabInvulTimer = 2;
 			main->meleeInvulTimer = 2;
@@ -1396,7 +1420,7 @@ static void initSkillUpgrade(ChrInfo &chr, SokuLib::Character character, SokuLib
 	mgr.renderInfos.yRotation = 80;
 }
 
-static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2::Player &mgr, SokuLib::v2::Player &main, unsigned index)
+static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2::Player &mgr, SokuLib::v2::Player &main, unsigned index, unsigned state)
 {
 	chr.chr = character;
 	chr.end = SokuLib::ACTION_IDLE;
@@ -1432,7 +1456,7 @@ static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2:
 	chr.startTimer = 0;
 	chr.cond = waitIdle;
 	chr.action = SokuLib::ACTION_SYSTEM_CARD;
-	if (main.frameState.actionId >= SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN && main.frameState.actionId <= SokuLib::ACTION_NEUTRAL_TECH) {
+	if (state == 2 && main.frameState.actionId >= SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN && main.frameState.actionId <= SokuLib::ACTION_NEUTRAL_TECH) {
 		chr.recovery = 30;
 		chr.slowTag = true;
 		mgr.setAction(SokuLib::ACTION_BOMB);
@@ -1447,9 +1471,16 @@ static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2:
 			chr.cardName = 1;
 		}
 	} else {
-		chr.cd = TAG_CD;
-		chr.maxCd = TAG_CD;
-		chr.meter += TAG_CALL_METER * main.meterGainMultiplier;
+		if ((mgr.position.x - mgr.gameData.opponent->position.x) * (main.position.x - mgr.gameData.opponent->position.x) < 0) {
+			chr.cd = CROSS_TAG_CD;
+			SokuLib::playSEWaveBuffer(SokuLib::SFX_LHFF_CHARGE);
+		} else if (mgr.isGrounded() && !main.isGrounded())
+			chr.cd = GROUND_TAG_CD;
+		else
+			chr.cd = TAG_CD;
+		chr.maxCd = chr.cd;
+		if (state == 2)
+			chr.meter += TAG_CALL_METER * main.meterGainMultiplier;
 	}
 }
 
@@ -2317,21 +2348,21 @@ void __fastcall updateCollisionBoxes(SokuLib::BattleManager *This)
 	speeds[1] += players[1]->additionalSpeed.x;
 	// P3 - P2
 	players[0] = SokuLib::v2::GameDataManager::instance->players[2];
-	if (players[0]->renderInfos.yRotation == 0 && players[0]->HP != 0) {
+	if (players[0]->renderInfos.yRotation == 0 && players[0]->hp != 0) {
 		fct(This);
 		speeds[2] += players[0]->additionalSpeed.x;
 		speeds[1] += players[1]->additionalSpeed.x;
 	}
 	// P3 - P4
 	players[1] = SokuLib::v2::GameDataManager::instance->players[3];
-	if (players[0]->renderInfos.yRotation == 0 && players[1]->renderInfos.yRotation == 0 && players[0]->HP != 0 && players[1]->HP != 0) {
+	if (players[0]->renderInfos.yRotation == 0 && players[1]->renderInfos.yRotation == 0 && players[0]->hp != 0 && players[1]->hp != 0) {
 		fct(This);
 		speeds[2] += players[0]->additionalSpeed.x;
 		speeds[3] += players[1]->additionalSpeed.x;
 	}
 	// P1 - P4
 	players[0] = SokuLib::v2::GameDataManager::instance->players[0];
-	if (players[1]->renderInfos.yRotation == 0 && players[1]->HP != 0) {
+	if (players[1]->renderInfos.yRotation == 0 && players[1]->hp != 0) {
 		fct(This);
 		speeds[0] += players[0]->additionalSpeed.x;
 		speeds[3] += players[1]->additionalSpeed.x;
@@ -2552,7 +2583,7 @@ void __fastcall onDeath(SokuLib::v2::Player *This)
 		p1 = players[1];
 		p2 = players[3];
 	}
-	p1->roundsWins = p1->HP == 0 && p2->HP == 0;
+	p1->roundsWins = p1->hp == 0 && p2->hp == 0;
 	p2->roundsWins = p1->roundsWins;
 }
 
@@ -2560,7 +2591,7 @@ unsigned char __fastcall checkWakeUp(SokuLib::v2::Player *This)
 {
 	auto ret = og_advanceFrame(This);
 
-	if (This->HP == 0)
+	if (This->hp == 0)
 		ret = 0;
 	return ret;
 }
@@ -2637,6 +2668,8 @@ void restoreHudRender(SokuLib::v2::InfoManager *hud, UnderObjects *p1)
 
 void displayCard(SokuLib::v2::Player *mgr, unsigned shown, unsigned meter, bool side, unsigned cardId)
 {
+	unsigned cost = shown;
+
 	shown -= mgr->weatherId == SokuLib::WEATHER_CLOUDY;
 	for (int j = 0; j < 5; j++) {
 		sidedSetPos(side, cardHolder, 4 + j * 22, 70);
@@ -2677,7 +2710,7 @@ void displayCard(SokuLib::v2::Player *mgr, unsigned shown, unsigned meter, bool 
 
 	auto chr = cardId < 100 ? SokuLib::CHARACTER_RANDOM : mgr->characterIndex;
 	auto &texture = cardsTextures[chr][cardId];
-	auto &texture2 = cardBlank[shown - 1];
+	auto &texture2 = cardBlank[cost - 1];
 
 	texture.setSize({20, 30});
 	texture.setRotation(M_PI / 6 * (side ? 1 : -1));
@@ -3016,7 +3049,7 @@ void __fastcall renderChrSelectChrData(int index)
 		offset = 1;
 	else
 		offset = (dat.portraitCounter * dat.portraitCounter) / (15.f * 15.f);
-	dat.portraitSprite.render(offset * 640 + dat.portrait->x2, dat.portrait->y2);
+	dat.portraitSprite.render(offset * 640 + dat.portrait->x2 + dat.portrait->x1, dat.portrait->y2 + dat.portrait->y1);
 }
 
 void __fastcall renderChrSelectChrDataGear(int index)
@@ -4498,7 +4531,7 @@ void __declspec(naked) selectProfileSpriteColor()
 }
 
 unsigned chrKeysContinue = 0x46C908;
-unsigned chrKeysSkip = 0x46CAB8;
+unsigned chrKeysSkip = 0x46CA0C;
 
 bool initStartingKeys(SokuLib::v2::Player * const assist)
 {
@@ -4664,7 +4697,7 @@ bool initStartingKeys(SokuLib::v2::Player * const assist)
 
 void renderKeysResult(const bool b, SokuLib::v2::Player * const assist)
 {
-	//if (currentIndex(assist) != 2)
+	if (currentIndex(assist) != 2)
 		return;
 	printf(
 		"%s (%i): h %i v %i a %i b %i c %i d %i se %i pa %i ch %i sp %i | h %i v %i a %i b %i c %i d %i ch %i sp %i\n",
@@ -4703,6 +4736,14 @@ void __declspec(naked) onChrKeys()
 		POP EDI
 		TEST AL, AL
 		JNZ keep
+		MOV EBX, dword ptr [ESI + 0x75c]
+		MOV EAX, dword ptr [ESI + 0x760]
+		MOV ECX, dword ptr [ESI + 0x764]
+		MOV EDX, dword ptr [ESI + 0x768]
+		MOV EBP, dword ptr [ESI + 0x76c]
+		MOV dword ptr [ESP + 0x1c], EBP
+		MOV EBP, dword ptr [ESI + 0x770]
+		MOV dword ptr [ESP + 0x20], EBP
 		JMP [chrKeysSkip]
 	keep:
 		JMP [chrKeysContinue]
@@ -5063,8 +5104,6 @@ void checkShock(SokuLib::v2::Player &chr, SokuLib::v2::Player &op, ChrInfo &info
 	chr.renderInfos.xRotation = 0;
 	chr.renderInfos.yRotation = 0;
 	chr.renderInfos.zRotation = 0;
-	chr.comboModifiers.chainArt = true;
-	chr.comboModifiers.chainSpell = true;
 	SokuLib::camera.forceYCenter = false;
 	SokuLib::camera.forceXCenter = false;
 	SokuLib::camera.forceScale = false;
@@ -5073,7 +5112,7 @@ void checkShock(SokuLib::v2::Player &chr, SokuLib::v2::Player &op, ChrInfo &info
 		if (op.position.y != 0) {
 			op.setAction(SokuLib::ACTION_AIR_CRUSHED);
 			op.gravity.y = 0.5;
-		} else if (op.HP == 0) {
+		} else if (op.hp == 0) {
 			op.setAction(SokuLib::ACTION_KNOCKED_DOWN);
 			op.hitStop = 0;
 		} else
@@ -5098,31 +5137,31 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 		kill = !kill;
 	if (SokuLib::checkKeyOneshot(DIK_F4, false, false, false))
 		disp = !disp;
+#ifdef _DEBUG
 	if (SokuLib::checkKeyOneshot(DIK_F3, false, false, false))
 		disp2 = !disp2;
 	if (SokuLib::checkKeyOneshot(DIK_F2, false, false, false))
 		disp3 = !disp3;
+#endif
 
 	if (This->matchState <= 2 || This->matchState == 4) {
-		int i = 0;
-
 		if (SokuLib::mainMode == SokuLib::BATTLE_MODE_PRACTICE && This->matchState == 2) {
 			if (kill) {
-				SokuLib::v2::GameDataManager::instance->players[2]->HP = 0;
-				SokuLib::v2::GameDataManager::instance->players[3]->HP = 0;
+				SokuLib::v2::GameDataManager::instance->players[2]->hp = 0;
+				SokuLib::v2::GameDataManager::instance->players[3]->hp = 0;
 			} else {
-				SokuLib::v2::GameDataManager::instance->players[2]->HP = SokuLib::v2::GameDataManager::instance->players[2]->maxHP;
-				SokuLib::v2::GameDataManager::instance->players[3]->HP = SokuLib::v2::GameDataManager::instance->players[3]->maxHP;
+				SokuLib::v2::GameDataManager::instance->players[2]->hp = SokuLib::v2::GameDataManager::instance->players[2]->maxHP;
+				SokuLib::v2::GameDataManager::instance->players[3]->hp = SokuLib::v2::GameDataManager::instance->players[3]->maxHP;
 			}
 		}
 		SokuLib::camera.p1X = &SokuLib::v2::GameDataManager::instance->players[0]->position.x;
 		SokuLib::camera.p2X = &SokuLib::v2::GameDataManager::instance->players[0]->position.x;
 		SokuLib::camera.p1Y = &SokuLib::v2::GameDataManager::instance->players[0]->position.y;
 		SokuLib::camera.p2Y = &SokuLib::v2::GameDataManager::instance->players[0]->position.y;
-		for (; i < 4; i++) {
+		for (int i = 1; i < 4; i++) {
 			if (i >= 2 && SokuLib::v2::GameDataManager::instance->players[i]->renderInfos.yRotation == 90)
 				continue;
-			if (i >= 2 && SokuLib::v2::GameDataManager::instance->players[i]->HP == 0)
+			if (i >= 2 && SokuLib::v2::GameDataManager::instance->players[i]->hp == 0)
 				continue;
 			if (*SokuLib::camera.p1X > SokuLib::v2::GameDataManager::instance->players[i]->position.x)
 				SokuLib::camera.p1X = &SokuLib::v2::GameDataManager::instance->players[i]->position.x;
@@ -5143,7 +5182,7 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 
 		if (info.tagAntiBuffer)
 			info.tagAntiBuffer--;
-		if (SokuLib::v2::GameDataManager::instance->players[i + 2]->HP == 0) {
+		if (SokuLib::v2::GameDataManager::instance->players[i + 2]->hp == 0) {
 			auto mate = SokuLib::v2::GameDataManager::instance->players[i + 2];
 
 			if (info.maxCd == 0)
@@ -5164,8 +5203,9 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 				*SokuLib::v2::GameDataManager::instance->players[!i],
 				info
 			);
-		} else if (SokuLib::v2::GameDataManager::instance->players[i]->HP == 0 && This->matchState <= 2) {
+		} else if (SokuLib::v2::GameDataManager::instance->players[i]->hp == 0 && This->matchState <= 2) {
 			info.deathTag = true;
+			info.activePose = 0;
 			goto swap;
 		} else if (
 			keys &&
@@ -5177,8 +5217,9 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 			keys->keymapManager->input.select && keys->keymapManager->input.select < 10 &&
 			(info.cd == 0 || !info.started) &&
 			!info.tagging && (
+				This->matchState != 2 ||
 				SokuLib::v2::GameDataManager::instance->players[i]->frameState.actionId < SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN ||
-				SokuLib::v2::GameDataManager::instance->players[i]->frameState.actionId >= SokuLib::ACTION_FORWARD_DASH ||
+				SokuLib::v2::GameDataManager::instance->players[i]->frameState.actionId > SokuLib::ACTION_NEUTRAL_TECH ||
 				info.meter >= SLOW_TAG_COST * ASSIST_CARD_METER
 			)
 		) {
@@ -5212,7 +5253,8 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 				SokuLib::v2::GameDataManager::instance->players[i + 2]->characterIndex,
 				*SokuLib::v2::GameDataManager::instance->players[i],
 				*SokuLib::v2::GameDataManager::instance->players[i + 2],
-				loadouts[originalIndex(SokuLib::v2::GameDataManager::instance->players[i + 2])]
+				loadouts[originalIndex(SokuLib::v2::GameDataManager::instance->players[i + 2])],
+				This->matchState
 			);
 			hud1->playerHUD[i].player = SokuLib::v2::GameDataManager::instance->players[i];
 			hud2.playerHUD[i].player = SokuLib::v2::GameDataManager::instance->players[i + 2];
@@ -6126,10 +6168,27 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	*(unsigned *)0x4799EE = 0x0424448B;
 	*(char *)0x47AF43 = 0x86; // fld dword ptr [eax+000004B0] -> fld dword ptr [esi+000004B0]
 
-	// FIXME: That doesn't work. The functions calling that one are
-	//        clobbering ESI before the call and the correction is then wrong.
-	//        I think it's possible to make the calling functions use EDI instead.
-	// mov eax,[ecx+00000170] -> mov edi,[esi+0000016C]
+	// Make the top functions use EDI so ESI is kept as is
+	// push esi -> push edi
+	*(char *)0x464A81 = 0x57;
+	// mov esi,ecx -> mov edi,ecx
+	*(char *)0x464A83 = 0xF9;
+	// mov eax,[esi+000001C0] -> mov eax,[edi+000001C0]
+	*(char *)0x464A8A = 0x87;
+	// pop esi -> pop edi
+	*(char *)0x464A97 = 0x5F;
+
+	// push esi -> push edi
+	*(char *)0x464AB1 = 0x57;
+	// mov esi,ecx -> mov edi,ecx
+	*(char *)0x464AB3 = 0xF9;
+	// mov eax,[esi+000001C0] -> mov eax,[edi+000001C0]
+	*(char *)0x464ABA = 0x87;
+	// pop esi -> pop edi
+	*(char *)0x464AC7 = 0x5F;
+
+	// We use ESI here which has been leaked from the top call. It is the object that's hitting us.
+	// mov eax,[ecx+00000170] -> mov eax,[esi+0000016C]
 	*(char *)0x463F5A = 0x86;
 	*(char *)0x463F5B = 0x6C;
 	// fmul dword ptr [esi+000004B0] -> fmul dword ptr [eax+000004B0]
@@ -6143,6 +6202,8 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	// mov al,[esi+000004AD] -> mov al,[edi+000004AD]
 	*(char *)0x463E32 = 0x87;
 
+	// mov ecx,[edi+0000016C] -> mov ecx,[esi+0000016C]
+	*(char *)0x47AE90 = 0x8E;
 	// mov eax,[edi+0000016C] -> mov eax,[esi+0000016C]
 	*(char *)0x47B016 = 0x86;
 	*(char *)0x47B057 = 0x86;
@@ -6150,16 +6211,15 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	*(char *)0x47B004 = 0x86;
 	*(char *)0x47AB70 = 0x86;
 	*(char *)0x47AB9A = 0x86;
+	// mov edx,[edi+0000016C] -> mov edx,[esi+0000016C]
 	*(char *)0x47ABC6 = 0x96;
+	*(char *)0x47AEB2 = 0x96;
 
 	// mov eax,[esi+0000016C] -> mov eax,[edi+0000016C]
 	*(char *)0x47B25E = 0x87;
 	*(char *)0x47B276 = 0x87;
 	*(char *)0x47B28A = 0x87;
 
-	*(char *)0x464A82 = 0x51;
-	SokuLib::TamperNearCall(0x464A83, 0x463F50);
-	*(char *)0x464A88 = 0x5E;
 
 	// We swap the left and right combo displays
 	// Original code:

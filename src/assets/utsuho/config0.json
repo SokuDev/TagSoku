@@ -43,7 +43,7 @@
         "air": {
             "cd": 300,
             "nb": 1,
-            "action": 507,
+            "action": 505,
             "offsetX": -50,
             "speedY": 0,
             "gravityY": 0
