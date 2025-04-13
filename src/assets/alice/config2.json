@@ -1,6 +1,6 @@
 {
-    "spells": [211],
-    "shownCost": 4,
+    "spells": [204],
+    "shownCost": 3,
 
     "8a": {
         "ground": {
@@ -61,11 +61,11 @@
             "speedX": 0,
             "speedY": 0,
             "offsetX": -50,
-            "cost": 4,
-            "cardName": 211,
+            "cost": 3,
+            "cardName": 204,
             "cd": 300,
             "nb": 1,
-            "action": 611
+            "action": 604
         },
         "air": {
             "speedX": 0,
@@ -73,11 +73,11 @@
             "posY": 0,
             "gravityY": 0,
             "offsetX": -50,
-            "cost": 4,
-            "cardName": 211,
+            "cost": 3,
+            "cardName": 204,
             "cd": 300,
             "nb": 1,
-            "action": 611
+            "action": 604
         }
     }
 }

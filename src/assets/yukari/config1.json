@@ -7,12 +7,14 @@
             "cd": 240,
             "nb": 1,
             "action": 510,
+            "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
             "offsetX": -50
         },
         "air": {
             "cd": 240,
             "nb": 1,
             "action": 510,
+            "allowedKeys": [0, 0, 0, 1, 0, 0, 0, 0],
             "offsetX": -50,
             "posY": 0
         }

@@ -4,48 +4,50 @@
 
     "8a": {
         "ground": {
-            "cd": 300,
-            "nb": 1,
-            "action": 520,
-            "offsetX": 0
-        },
-        "air": {
-            "cd": 300,
-            "nb": 1,
-            "action": 520,
-            "offsetX": 0,
-            "posY": 0
-        }
-    },
-    "8b": {
-        "ground": {
             "cd": 360,
             "nb": 1,
-            "action": 560,
+            "action": 561,
+            "allowedKeys": [2, 0, 0, 0, 0, 0, 0, 0],
             "offsetX": -50
         },
         "air": {
             "cd": 360,
             "nb": 1,
-            "action": 560,
+            "action": 561,
+            "allowedKeys": [2, 0, 0, 0, 0, 0, 0, 0],
             "offsetX": -50,
             "posY": 0
+        }
+    },
+    "8b": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 551,
+            "offsetX": -50
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 553,
+            "offsetX": -50,
+            "gravityY": 0,
+            "speedY": 0
         }
     },
     "8c": {
         "ground": {
             "cd": 300,
             "nb": 1,
-            "action": 550,
+            "action": 530,
             "offsetX": -50
         },
         "air": {
             "cd": 300,
             "nb": 1,
-            "action": 552,
+            "action": 530,
             "offsetX": -50,
-            "gravityY": 0,
-            "speedY": 0
+            "posY": 0
         }
     },
 

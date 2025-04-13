@@ -21,16 +21,18 @@
     },
     "8b": {
         "ground": {
-            "cd": 300,
-            "nb": 1,
-            "action": 530,
+            "cd": 450,
+            "nb": 3,
+            "action": 568,
+            "end": 566,
             "offsetX": -50,
             "cond": "end"
         },
         "air": {
-            "cd": 300,
-            "nb": 1,
-            "action": 530,
+            "cd": 450,
+            "nb": 3,
+            "action": 568,
+            "end": 566,
             "posY": 0,
             "offsetX": -50,
             "cond": "end"
@@ -38,20 +40,16 @@
     },
     "8c": {
         "ground": {
-            "cd": 450,
-            "nb": 3,
-            "action": 568,
-            "end": 566,
-            "offsetX": -50,
+            "cd": 300,
+            "nb": 1,
+            "action": 500,
             "cond": "end"
         },
         "air": {
-            "cd": 450,
-            "nb": 3,
-            "action": 568,
-            "end": 566,
+            "cd": 300,
+            "nb": 1,
+            "action": 500,
             "posY": 0,
-            "offsetX": -50,
             "cond": "end"
         }
     },

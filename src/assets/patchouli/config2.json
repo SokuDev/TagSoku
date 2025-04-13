@@ -22,18 +22,18 @@
     },
     "8b": {
         "ground": {
-            "cd": 390,
+            "cd": 300,
             "nb": 1,
-            "action": 511,
-            "offsetX": -50,
+            "action": 580,
+            "offsetX": 0,
             "cond": "end"
         },
         "air": {
-            "cd": 390,
+            "cd": 300,
             "nb": 1,
-            "action": 511,
+            "action": 580,
             "posY": 0,
-            "offsetX": -50,
+            "offsetX": 0,
             "cond": "end"
         }
     },

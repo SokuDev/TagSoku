@@ -1,5 +1,5 @@
 {
-    "spells": [203],
+    "spells": [200],
     "shownCost": 3,
 
     "8a": {
@@ -61,10 +61,10 @@
             "speedY": 0,
             "offsetX": -50,
             "cost": 3,
-            "cardName": 203,
+            "cardName": 200,
             "cd": 300,
             "nb": 1,
-            "action": 603
+            "action": 600
         },
         "air": {
             "speedX": 0,
@@ -73,10 +73,10 @@
             "offsetX": -50,
             "posY": 0,
             "cost": 3,
-            "cardName": 203,
+            "cardName": 200,
             "cd": 300,
             "nb": 1,
-            "action": 603
+            "action": 600
         }
     }
 }

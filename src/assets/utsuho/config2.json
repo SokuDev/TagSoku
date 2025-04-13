@@ -24,16 +24,15 @@
         "ground": {
             "cd": 210,
             "nb": 1,
-            "action": 520,
+            "action": 525,
             "offsetX": -50
         },
         "air": {
             "cd": 210,
             "nb": 1,
-            "action": 522,
+            "action": 525,
             "offsetX": -50,
-            "speedY": 0,
-            "gravityY": 0
+            "posY": 0
         }
     },
     "8c": {

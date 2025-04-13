@@ -4,6 +4,19 @@
 
     "8a": {
         "ground": {
+            "cd": 270,
+            "nb": 1,
+            "action": 560
+        },
+        "air": {
+            "cd": 270,
+            "nb": 1,
+            "action": 560,
+            "posY": 0
+        }
+    },
+    "8b": {
+        "ground": {
             "cd": 300,
             "nb": 1,
             "action": 521
@@ -13,23 +26,6 @@
             "nb": 1,
             "action": 521,
             "posY": 0
-        }
-    },
-    "8b": {
-        "ground": {
-            "cd": 375,
-            "nb": 1,
-            "action": 565,
-            "offsetX": 200,
-            "startup": 15
-        },
-        "air": {
-            "cd": 375,
-            "nb": 1,
-            "action": 565,
-            "offsetX": 200,
-            "posY": 0,
-            "startup": 15
         }
     },
     "8c": {

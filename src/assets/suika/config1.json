@@ -36,13 +36,13 @@
         "ground": {
             "cd": 300,
             "nb": 1,
-            "action": 500
+            "action": 510
         },
         "air": {
-            "cd": 300,
+            "cd": 240,
             "nb": 1,
-            "action": 500,
-            "posY": 0
+            "action": 512,
+            "recovery": 120
         }
     },
 

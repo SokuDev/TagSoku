@@ -24,6 +24,8 @@
 #define TAG_CALL_METER 150
 #define ASSIST_CALL_METER 75
 #define ASSIST_CARD_METER 750
+#define MAX_METER_REQ 1000
+#define START_BURST_CHARGES 2
 #define ASSIST_METER_CONVERSION 1
 #define SLOW_TAG_STARTUP 60
 #define TAG_CD 300
@@ -405,7 +407,9 @@ struct ChrInfo {
 	bool ending = false;
 	bool ended = false;
 	bool callInit = true;
+	unsigned char burstCharges = 0;
 	unsigned char activePose = 0;
+	unsigned short meterReq = 0;
 	unsigned tagAntiBuffer = 0;
 	unsigned startup = 0;
 	unsigned cutscene = 0;
@@ -541,6 +545,8 @@ static SokuLib::DrawUtils::Sprite yesSelectedSprite;
 static SokuLib::DrawUtils::Sprite cardHolder;
 static SokuLib::DrawUtils::Sprite meterIndicator;
 static SokuLib::DrawUtils::Sprite cardHiddenSmall;
+static SokuLib::DrawUtils::Sprite cardLocked;
+static SokuLib::DrawUtils::Sprite bombIcon;
 static SokuLib::DrawUtils::Sprite cardBlank[5];
 static SokuLib::DrawUtils::Sprite highlight[20];
 static SokuLib::DrawUtils::Sprite bigHighlight[20];
@@ -983,6 +989,8 @@ static void loadCardAssets()
 	loadTexture(cardHolder,            "data/battle/cardGaugeSmallB.bmp");
 	loadTexture(meterIndicator,        "data/battle/cardBarSmallB.bmp");
 	loadTexture(cardHiddenSmall,       "data/battle/cardFaceDownSmall.bmp");
+	loadTexture(cardLocked,            "data/infoeffect/lock_card.bmp");
+	loadTexture(bombIcon,              "data/infoeffect/bomb.bmp");
 	for (int i = 0; i < 5; i++) {
 		sprintf(buffer, "data/infoeffect/blank_%icost.bmp", i + 1);
 		loadTexture(cardBlank[i], buffer);
@@ -1159,12 +1167,18 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 		//mgr->handInfo.cardCount++;
 		//mgr->consumeCard(mgr->handInfo.cardCount - 1, 1, 60);
 		//forceCardCost = false;
+
+		unsigned cost = chr.cost * ASSIST_CARD_METER;
+
 		if (mgr->weatherId == SokuLib::WEATHER_MOUNTAIN_VAPOR && chr.meter < chr.cost * ASSIST_CARD_METER)
-			chr.meter = 0;
+			cost = chr.meter;
 		else if (mgr->weatherId == SokuLib::WEATHER_CLOUDY)
-			chr.meter -= max(1, chr.cost - 1) * ASSIST_CARD_METER;
+			cost = max(1, chr.cost - 1) * ASSIST_CARD_METER;
+		if (chr.meter <= cost)
+			chr.meter = 0;
 		else
-			chr.meter -= chr.cost * ASSIST_CARD_METER;
+			chr.meter -= cost;
+		chr.meterReq = MAX_METER_REQ;
 		*(int *)0x8985E8 = oldHud;
 		chr.cost = 0;
 		chr.cardName = 0;
@@ -1185,6 +1199,7 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 			mgr->setAction(SokuLib::ACTION_IDLE);
 		if (SokuLib::mainMode == SokuLib::BATTLE_MODE_PRACTICE) {
 			chr.cd = 0;
+			chr.meterReq = 0;
 			chr.meter = loadedData[chr.chr][chr.loadoutIndex].shownCost * ASSIST_CARD_METER;
 		}
 
@@ -1209,6 +1224,7 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 		mgr->speed = {0, 0};
 	} else if (chr.nb != 0 && mgr->renderInfos.yRotation != 0) {
 		mgr->renderInfos.yRotation -= 10;
+		mgr->checkTurnAround();
 		if (chr.speed.x)
 			mgr->speed.x = *chr.speed.x;
 		if (chr.speed.y)
@@ -1420,6 +1436,20 @@ static void initSkillUpgrade(ChrInfo &chr, SokuLib::Character character, SokuLib
 	mgr.renderInfos.yRotation = 80;
 }
 
+void gainMeter(ChrInfo &chr, unsigned meter)
+{
+	if (chr.meterReq > meter)
+		chr.meterReq -= meter;
+	else if (chr.meterReq && chr.meterReq <= meter) {
+		chr.meterReq = 0;
+		SokuLib::playSEWaveBuffer(SokuLib::SFX_RECOVER_ORB);
+	} else {
+		chr.meter += meter;
+		if (chr.meter > ASSIST_CARD_METER * 5)
+			chr.meter = ASSIST_CARD_METER * 5;
+	}
+}
+
 static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2::Player &mgr, SokuLib::v2::Player &main, unsigned index, unsigned state)
 {
 	chr.chr = character;
@@ -1467,11 +1497,14 @@ static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2:
 		chr.maxCd = SLOW_TAG_CD;
 		if (!chr.deathTag) {
 			mgr.timeStop = 2;
-			chr.cost = SLOW_TAG_COST;
+			if (chr.meterReq == 0 && chr.meter >= SLOW_TAG_COST * ASSIST_CARD_METER)
+				chr.meter -= SLOW_TAG_COST * ASSIST_CARD_METER;
+			else
+				chr.burstCharges--;
 			chr.cardName = 1;
 		}
 	} else {
-		if ((mgr.position.x - mgr.gameData.opponent->position.x) * (main.position.x - mgr.gameData.opponent->position.x) < 0) {
+		if ((mgr.position.x - mgr.gameData.opponent->position.x) * (main.position.x - mgr.gameData.opponent->position.x) < 0 && mgr.gameData.opponent->isOnGround()) {
 			chr.cd = CROSS_TAG_CD;
 			SokuLib::playSEWaveBuffer(SokuLib::SFX_LHFF_CHARGE);
 		} else if (mgr.isGrounded() && !main.isGrounded())
@@ -1480,7 +1513,7 @@ static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2:
 			chr.cd = TAG_CD;
 		chr.maxCd = chr.cd;
 		if (state == 2)
-			chr.meter += TAG_CALL_METER * main.meterGainMultiplier;
+			gainMeter(chr, TAG_CALL_METER * main.meterGainMultiplier);
 	}
 }
 
@@ -1492,12 +1525,14 @@ bool initAttack(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &ch
 		unsigned stance = chr.currentStance;
 
 		if (atk->cost == 0);
+		else if (chr.meterReq)
+			return false;
 		else if (obj->weatherId != SokuLib::WEATHER_MOUNTAIN_VAPOR) {
 			unsigned cost = atk->cost;
 
 			if (cost > 1 && obj->weatherId == SokuLib::WEATHER_CLOUDY)
 				cost--;
-			if (cost * ASSIST_CARD_METER > chr.meter)
+			if (chr.meter < cost * ASSIST_CARD_METER)
 				return false;
 		} else if (chr.meter < ASSIST_CARD_METER && atk->cost)
 			return false;
@@ -1544,7 +1579,7 @@ bool initAttack(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &ch
 		chr.started = false;
 		chr.ended = false;
 		chr.callInit = true;
-		chr.meter += ASSIST_CALL_METER * main->meterGainMultiplier;
+		gainMeter(chr, ASSIST_CALL_METER * main->meterGainMultiplier);
 	}
 	return static_cast<bool>(atk);
 }
@@ -1915,13 +1950,12 @@ int __fastcall CSelectSV_OnProcess(SokuLib::SelectServer *This)
 	return ret;
 }
 
-void __fastcall CBattleManager_HandleCollision(SokuLib::BattleManager* This, int unused, void* object, SokuLib::v2::Player* character) {
+void __fastcall CBattleManager_HandleCollision(SokuLib::BattleManager* This, int unused, void* object, SokuLib::v2::Player* character)
+{
 	auto players = (SokuLib::v2::Player**)((int)This + 0x0C);
-	SokuLib::v2::Player *assist = players[currentIndex(character) | 2];
 
-	character = players[currentIndex(character) & 1];
-	ogBattleMgrHandleCollision(This, unused, object, assist);
-	ogBattleMgrHandleCollision(This, unused, object, character);
+	ogBattleMgrHandleCollision(This, unused, object, players[currentIndex(character) | 2]);
+	ogBattleMgrHandleCollision(This, unused, object, players[currentIndex(character) & 1]);
 }
 
 static int weirdRand(int key, int delay)
@@ -2241,6 +2275,7 @@ void initHud()
 	puts("Construct HUD");
 	*(const char **)0x47DEC2 = effectPath2;
 	*(const char **)0x47DEE5 = battleUpperPath2;
+	::FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
 	((void (__thiscall *)(SokuLib::v2::InfoManager *))0x47EAF0)(&hud2);
 	*(const char **)0x47DEE5 = battleUpperPath1;
 	*(int *)0x47DEC2 = 0x85B430;
@@ -2257,6 +2292,7 @@ void initHud()
 	SokuLib::v2::GameDataManager::instance->players[0] = SokuLib::v2::GameDataManager::instance->players[2];
 	SokuLib::v2::GameDataManager::instance->players[1] = SokuLib::v2::GameDataManager::instance->players[3];
 	*(char *)0x47E29C = 0x14;
+	::FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
 	((void (__thiscall *)(SokuLib::v2::InfoManager *))0x47E260)(&hud2);
 	*(char *)0x47E29C = 0xC;
 	players[0] = p1;
@@ -2266,6 +2302,7 @@ void initHud()
 	hud2.p1Portrait->pos.x -= 118;
 	hud2.p2Portrait->pos.x -= 118;
 	::VirtualProtect((PVOID)TEXT_SECTION_OFFSET, TEXT_SECTION_SIZE, old, &old);
+	::FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
 
 	getHudElems(*hud1, hudElems[0], false);
 	getHudElems(*hud1, hudElems[1], true);
@@ -2348,21 +2385,21 @@ void __fastcall updateCollisionBoxes(SokuLib::BattleManager *This)
 	speeds[1] += players[1]->additionalSpeed.x;
 	// P3 - P2
 	players[0] = SokuLib::v2::GameDataManager::instance->players[2];
-	if (players[0]->renderInfos.yRotation == 0 && players[0]->hp != 0) {
+	if (players[0]->renderInfos.yRotation != 90 && players[0]->hp != 0) {
 		fct(This);
 		speeds[2] += players[0]->additionalSpeed.x;
 		speeds[1] += players[1]->additionalSpeed.x;
 	}
 	// P3 - P4
 	players[1] = SokuLib::v2::GameDataManager::instance->players[3];
-	if (players[0]->renderInfos.yRotation == 0 && players[1]->renderInfos.yRotation == 0 && players[0]->hp != 0 && players[1]->hp != 0) {
+	if (players[0]->renderInfos.yRotation != 90 && players[1]->renderInfos.yRotation != 90 && players[0]->hp != 0 && players[1]->hp != 0) {
 		fct(This);
 		speeds[2] += players[0]->additionalSpeed.x;
 		speeds[3] += players[1]->additionalSpeed.x;
 	}
 	// P1 - P4
 	players[0] = SokuLib::v2::GameDataManager::instance->players[0];
-	if (players[1]->renderInfos.yRotation == 0 && players[1]->hp != 0) {
+	if (players[1]->renderInfos.yRotation != 90 && players[1]->hp != 0) {
 		fct(This);
 		speeds[0] += players[0]->additionalSpeed.x;
 		speeds[3] += players[1]->additionalSpeed.x;
@@ -2666,7 +2703,22 @@ void restoreHudRender(SokuLib::v2::InfoManager *hud, UnderObjects *p1)
 
 #define sidedSetPos(side, t, xpos, ypos) (t).setPosition({(side) ? 640 - (xpos) - (int)(t).getSize().x : (xpos), ypos})
 
-void displayCard(SokuLib::v2::Player *mgr, unsigned shown, unsigned meter, bool side, unsigned cardId)
+void displayGrayedOut(const SokuLib::DrawUtils::Sprite &sprite)
+{
+	DWORD o;
+
+	::VirtualProtect((PVOID)TEXT_SECTION_OFFSET, TEXT_SECTION_SIZE, PAGE_EXECUTE_WRITECOPY, &o);
+	auto old = SokuLib::TamperNearJmpOpr(0x7FB269, &SokuLib::DrawUtils::Sprite::draw);
+	auto fun = (void (__thiscall *)(const void *, float, float, float))0x7FB200;
+
+	::FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
+	fun(&sprite, 0.299, 0.587, 0.114);
+	SokuLib::TamperNearJmpOpr(0x7FB269, old);
+	::VirtualProtect((PVOID)TEXT_SECTION_OFFSET, TEXT_SECTION_SIZE, o, &o);
+	::FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
+}
+
+void displayCard(SokuLib::v2::Player *mgr, unsigned shown, const ChrInfo &info, bool side, unsigned cardId)
 {
 	unsigned cost = shown;
 
@@ -2677,9 +2729,9 @@ void displayCard(SokuLib::v2::Player *mgr, unsigned shown, unsigned meter, bool 
 	}
 	if (mgr->weatherId != SokuLib::WEATHER_MOUNTAIN_VAPOR) {
 		int j = 0;
-		float ratio = (meter % ASSIST_CARD_METER) / (float)ASSIST_CARD_METER;
+		float ratio = (info.meter % ASSIST_CARD_METER) / (float)ASSIST_CARD_METER;
 
-		while (j < meter / ASSIST_CARD_METER && j < 5) {
+		while (j < info.meter / ASSIST_CARD_METER && j < 5) {
 			auto &texture = cardBlank[j];
 
 			texture.setSize({18, 28});
@@ -2688,14 +2740,14 @@ void displayCard(SokuLib::v2::Player *mgr, unsigned shown, unsigned meter, bool 
 			texture.draw();
 			j++;
 		}
-		if (meter % ASSIST_CARD_METER) {
+		if (info.meter % ASSIST_CARD_METER) {
 			meterIndicator.rect.height = meterIndicator.texture.getSize().y * ratio;
 			meterIndicator.rect.top = meterIndicator.texture.getSize().y - meterIndicator.rect.height;
 			meterIndicator.setSize({18, static_cast<unsigned int>(28 * ratio)});
 			sidedSetPos(side, meterIndicator, 6 + j * 22, static_cast<int>(72 + 28 - meterIndicator.getSize().y));
 			meterIndicator.draw();
 		}
-		if (shown * ASSIST_CARD_METER <= meter) {
+		if (shown * ASSIST_CARD_METER <= info.meter && !info.meterReq) {
 			setRenderMode(2);
 			for (int k = 0; k < shown; k++) {
 				sidedSetPos(side, highlight[highlightAnimation[2 + side]], k * 22 - 1, 53);
@@ -2707,13 +2759,21 @@ void displayCard(SokuLib::v2::Player *mgr, unsigned shown, unsigned meter, bool 
 		sidedSetPos(side, cardHiddenSmall, 6 + j * 22, 72);
 		cardHiddenSmall.draw();
 	}
+	if (info.meterReq) {
+		cardLocked.setSize(cardHiddenSmall.getSize());
+		for (int j = 0; j < 5; j++) {
+			sidedSetPos(side, cardLocked, 6 + j * 22, 72);
+			cardLocked.draw();
+		}
+	}
 
 	auto chr = cardId < 100 ? SokuLib::CHARACTER_RANDOM : mgr->characterIndex;
 	auto &texture = cardsTextures[chr][cardId];
 	auto &texture2 = cardBlank[cost - 1];
 
+
 	texture.setSize({20, 30});
-	texture.setRotation(M_PI / 6 * (side ? 1 : -1));
+	texture.setRotation(M_PI / 6 * (side ? 1 : -1), {10, 15});
 	sidedSetPos(side, texture, 9 + 5 * 22, 72);
 	texture.setPosition({
 		texture.getPosition().x + (side ? 1 : 2),
@@ -2723,14 +2783,41 @@ void displayCard(SokuLib::v2::Player *mgr, unsigned shown, unsigned meter, bool 
 	texture.draw();
 	sidedSetPos(side, texture, 9 + 5 * 22, 72);
 	texture.tint = SokuLib::Color::White;
-	texture.draw();
-	texture.setRotation(0);
+	displayGrayedOut(texture);
 
 	texture2.setSize({20, 30});
-	texture2.setRotation(M_PI / 6 * (side ? 1 : -1));
+	texture2.setRotation(M_PI / 6 * (side ? 1 : -1), {10, 15});
 	sidedSetPos(side, texture2, 9 + 5 * 22, 72);
 	texture2.tint = SokuLib::Color::White;
+	displayGrayedOut(texture2);
+
+	cardLocked.setSize({20, 30U});
+	cardLocked.setRotation(M_PI / 6 * (side ? 1 : -1));
+	sidedSetPos(side, cardLocked, 9 + 5 * 22, 72);
+	cardLocked.draw();
+	cardLocked.setRotation(0);
+
+
+	texture.rect.height = texture.texture.getSize().y * (MAX_METER_REQ - info.meterReq) / MAX_METER_REQ;
+	texture.setSize({20, 30U * (MAX_METER_REQ - info.meterReq) / MAX_METER_REQ});
+	sidedSetPos(side, texture, 9 + 5 * 22, 72);
+	texture.draw();
+	texture.rect.height = texture.texture.getSize().y;
+
+	texture2.rect.height = texture2.texture.getSize().y * (MAX_METER_REQ - info.meterReq) / MAX_METER_REQ;
+	texture2.setSize({20, 30U * (MAX_METER_REQ - info.meterReq) / MAX_METER_REQ});
+	sidedSetPos(side, texture2, 9 + 5 * 22, 72);
 	texture2.draw();
+	texture2.rect.height = texture2.texture.getSize().y;
+
+
+	for (int i = 0; i < info.burstCharges; i++) {
+		sidedSetPos(side, bombIcon, 9 + 5 * 22 + 30 + 18 * i, 76);
+		bombIcon.draw();
+	}
+
+
+	texture.setRotation(0);
 	texture2.setRotation(0);
 }
 
@@ -2747,12 +2834,14 @@ int __fastcall onHudRender(SokuLib::v2::InfoManager *This)
 		*(char *)0x47D857 = 0xE9;
 		*(unsigned *)0x47D858 = 0x339;
 		initHudRender(&hud2, &hudElems[2]);
+		::FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
 		ogHudRender(&hud2);
 		restoreHudRender(&hud2, &hudElems[2]);
 		// JNE 0047D9EE
 		*(char *)0x47D857 = 0x0F;
 		*(char *)0x47D858 = 0x85;
 		*(unsigned *)0x47D859 = 0x119;
+		::FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
 	}
 
 	initHudRender(This, &hudElems[0]);
@@ -2760,6 +2849,7 @@ int __fastcall onHudRender(SokuLib::v2::InfoManager *This)
 	restoreHudRender(This, &hudElems[0]);
 
 	::VirtualProtect((PVOID)TEXT_SECTION_OFFSET, TEXT_SECTION_SIZE, old, &old);
+	::FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
 	if (SokuLib::getBattleMgr().matchState <= 5) {
 		hud2.battleUpper.render(0, 0, 26);
 	}
@@ -2807,8 +2897,8 @@ int __fastcall onHudRender(SokuLib::v2::InfoManager *This)
 	auto &leftData = loadedData[currentChr.first.chr][currentChr.first.loadoutIndex];
 	auto &rightData = loadedData[currentChr.second.chr][currentChr.second.loadoutIndex];
 
-	displayCard(SokuLib::v2::GameDataManager::instance->players[2], leftData.shownCost, currentChr.first.meter, false, leftData.spells.front());
-	displayCard(SokuLib::v2::GameDataManager::instance->players[3], rightData.shownCost, currentChr.second.meter, true, rightData.spells.front());
+	displayCard(SokuLib::v2::GameDataManager::instance->players[2], leftData.shownCost, currentChr.first, false, leftData.spells.front());
+	displayCard(SokuLib::v2::GameDataManager::instance->players[3], rightData.shownCost, currentChr.second, true, rightData.spells.front());
 	return ret;
 }
 
@@ -4648,12 +4738,14 @@ bool initStartingKeys(SokuLib::v2::Player * const assist)
 		for (int i = 0; i < 8; i++) {
 			int &old = ((int *)&assist->inputData.keyInput)[i];
 			int actual = assist->keyManager->keymapManager->input.select;
+			int actual2 = ((int *)&assist->keyManager->keymapManager->input)[i];
 			int authorized = ((int *)&chr.allowedKeys)[i];
+			int start = ((int *)&chr.startKeys)[i];
 
 			if (i == 6)
 				continue;
 			if (i >= 2) {
-				if (actual && authorized)
+				if (actual && authorized || start)
 					old++;
 				else if ((i != 3 && i != 4) || !old || ((int *)&assist->keyManager->keymapManager->input)[i] == 0)
 					old = 0;
@@ -4662,35 +4754,31 @@ bool initStartingKeys(SokuLib::v2::Player * const assist)
 			} else {
 				if (actual * old < 0)
 					old = 0;
-				if (!authorized || actual == 0)
-					old = 0;
-				else if (actual < 0)
-					old--;
-				else
-					old++;
+				if (authorized == 2) {
+					if (actual2 == 0)
+						old = 0;
+					else if (actual2 < 0)
+						old--;
+					else
+						old++;
+				} else {
+					if (!authorized || actual == 0)
+						old = 0;
+					else if (actual < 0)
+						old--;
+					else
+						old++;
+				}
 			}
 		}
 	} else if (chr.startup >= 1 || assist->renderInfos.yRotation > 10) {
 		assist->inputData.keyInput.horizontalAxis = 0;
 		assist->inputData.keyInput.verticalAxis = 0;
 		assist->inputData.keyInput.a = 0;
-		assist->inputData.keyInput.b = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.b ? assist->inputData.keyInput.b + 1 : 0;
-		assist->inputData.keyInput.c = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.c ? assist->inputData.keyInput.c + 1 : 0;
+		assist->inputData.keyInput.b = 0;
+		assist->inputData.keyInput.c = 0;
 		assist->inputData.keyInput.d = 0;
 		assist->inputData.keyInput.spellcard = 0;
-		return false;
-	} else for (int i = 2; i < 6; i++) {
-		int &old = ((int *)&assist->inputData.keyInput)[i];
-		int actual = ((int *)&assist->keyManager->keymapManager->input)[i];
-		int &held = ((int *)&chr.releasedKeys)[i];
-
-		if (actual && held)
-			old++;
-		else if ((i != 3 && i != 4) || !old || ((int *)&assist->keyManager->keymapManager->input)[i] == 0) {
-			old = 0;
-			held = 0;
-		} else
-			old++;
 	}
 	return false;
 }
@@ -4904,7 +4992,11 @@ public:
 		auto players = (SokuLib::v2::Player**)((int)&SokuLib::getBattleMgr() + 0xC);
 
 		this->_currentChr.first.meter = currentChr.first.meter;
+		this->_currentChr.second.meterReq = currentChr.second.meterReq;
+		this->_currentChr.second.burstCharges = currentChr.second.burstCharges;
 		this->_currentChr.second.meter = currentChr.second.meter;
+		this->_currentChr.second.meterReq = currentChr.second.meterReq;
+		this->_currentChr.second.burstCharges = currentChr.second.burstCharges;
 		for (int i = 0; i < 4; i++) {
 			this->_players1[i] = players[i];
 			this->_players2[i] = SokuLib::v2::GameDataManager::instance->players[i];
@@ -4963,7 +5055,11 @@ public:
 	{
 		currentChr = this->_currentChr;
 		currentChr.first.meter = this->_currentChr.first.meter;
+		currentChr.first.meterReq = this->_currentChr.first.meterReq;
+		currentChr.first.burstCharges = this->_currentChr.first.burstCharges;
 		currentChr.second.meter = this->_currentChr.second.meter;
+		currentChr.second.meterReq = this->_currentChr.second.meterReq;
+		currentChr.second.burstCharges = this->_currentChr.second.burstCharges;
 	}
 };
 
@@ -5039,6 +5135,27 @@ int (SokuLib::BattleManager::*og_battleMgrOnKO)();
 int (SokuLib::BattleManager::*og_battleMgrOnGirlsTalk)();
 int (SokuLib::BattleManager::*og_battleMgrUnknownFunction)();
 
+void __fastcall handleBE3(SokuLib::v2::Player *This)
+{
+	This->renderInfos.zRotation = 0;
+	This->FUN_0046d950();
+	if (SokuLib::v2::GameDataManager::instance->players[currentIndex(This) + 2]->hp == 0)
+		This->setAction(SokuLib::ACTION_BE3);
+	else
+		This->setAction(SokuLib::ACTION_BE2);
+}
+
+unsigned doBE3RetAddr = 0x487A53;
+
+void __declspec(naked) checkBE3()
+{
+	__asm {
+		MOV ECX, ESI
+		CALL handleBE3
+		JMP [doBE3RetAddr]
+	}
+}
+
 void checkShock(SokuLib::v2::Player &chr, SokuLib::v2::Player &op, ChrInfo &info)
 {
 	if (op.timeStop)
@@ -5051,11 +5168,14 @@ void checkShock(SokuLib::v2::Player &chr, SokuLib::v2::Player &op, ChrInfo &info
 		return;
 	if (
 		chr.frameState.actionId >= SokuLib::ACTION_RIGHTBLOCK_HIGH_SMALL_BLOCKSTUN &&
-		chr.frameState.actionId < SokuLib::ACTION_FORWARD_AIRTECH &&
+		chr.frameState.actionId < SokuLib::ACTION_AIR_GUARD &&
 		chr.isOnGround() &&
-		info.meter >= ASSIST_CARD_METER * 2
+		(info.meterReq == 0 && info.meter >= ASSIST_CARD_METER * 2 || info.burstCharges)
 	) {
-		info.meter -= ASSIST_CARD_METER * 2;
+		if (info.meterReq == 0 && info.meter >= ASSIST_CARD_METER * 2)
+			info.meter -= ASSIST_CARD_METER * 2;
+		else
+			info.burstCharges--;
 		chr.setAction(SokuLib::ACTION_BOMB);
 		info.tagAntiBuffer = 20;
 		chr.createEffect(69, chr.position.x, chr.position.y + 120, 1, 1);
@@ -5078,6 +5198,17 @@ void checkShock(SokuLib::v2::Player &chr, SokuLib::v2::Player &op, ChrInfo &info
 		chr.maxSpirit -= 200;
 		chr.timeWithBrokenOrb = 0;
 		chr.currentSpirit = chr.maxSpirit;
+	} else {
+		for (int i = 0; i < 10; i++)
+			chr.createEffect(200, chr.position.x, chr.position.y, chr.direction, 1);
+		for (int i = 0; i < 10; i++)
+			chr.createEffect(201, chr.position.x, chr.position.y, chr.direction, 1);
+	}
+	if (SokuLib::activeWeather == SokuLib::WEATHER_SUN_SHOWER) {
+		for (int i = 0; i < 5; i++)
+			chr.createEffect(200, chr.position.x, chr.position.y, chr.direction, 1);
+		for (int i = 0; i < 5; i++)
+			chr.createEffect(201, chr.position.x, chr.position.y, chr.direction, 1);
 	}
 	if (chr.currentSpirit < 200)
 		chr.currentSpirit = 0;
@@ -5220,7 +5351,7 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 				This->matchState != 2 ||
 				SokuLib::v2::GameDataManager::instance->players[i]->frameState.actionId < SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN ||
 				SokuLib::v2::GameDataManager::instance->players[i]->frameState.actionId > SokuLib::ACTION_NEUTRAL_TECH ||
-				info.meter >= SLOW_TAG_COST * ASSIST_CARD_METER
+				(info.meterReq == 0 && info.meter >= SLOW_TAG_COST * ASSIST_CARD_METER || info.burstCharges)
 			)
 		) {
 			info.deathTag = false;
@@ -5427,10 +5558,14 @@ void *onLoadingDone()
 	}
 	currentChr.first = ChrInfo();
 	currentChr.first.meter = 0;
+	currentChr.first.meterReq = 0;
+	currentChr.first.burstCharges = START_BURST_CHARGES;
 	currentChr.first.loadoutIndex = loadouts[2];
 	currentChr.first.chr = assists.first.character;
 	currentChr.second = ChrInfo();
 	currentChr.second.meter = 0;
+	currentChr.second.meterReq = 0;
+	currentChr.second.burstCharges = START_BURST_CHARGES;
 	currentChr.second.loadoutIndex = loadouts[3];
 	currentChr.second.chr = assists.second.character;
 
@@ -5716,11 +5851,7 @@ int __stdcall my_sendto(SOCKET s, char * buf, int len, int flags, sockaddr * to,
 
 void onMeterGained(SokuLib::v2::Player *player, int meter)
 {
-	auto &info = (&currentChr.first)[currentIndex(player)];
-
-	info.meter += meter * ASSIST_METER_CONVERSION;
-	if (info.meter > ASSIST_CARD_METER * 5)
-		info.meter = ASSIST_CARD_METER * 5;
+	gainMeter((&currentChr.first)[currentIndex(player)], meter * ASSIST_METER_CONVERSION);
 }
 
 void __declspec(naked) onMeterGained_hook()
@@ -5897,6 +6028,13 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	og_CProfileDeckEdit_Init = SokuLib::union_cast<SokuLib::ProfileDeckEdit *(SokuLib::ProfileDeckEdit::*)(int, int, SokuLib::Sprite *)>(
 		SokuLib::TamperNearJmpOpr(0x0044d529, CProfileDeckEdit_Init)
 	);
+
+	*(char *)0x4879FB = 0x74;
+	*(char *)0x4879FC = 0x39;
+	*(char *)0x4879FD = 0x7F;
+	*(char *)0x4879FE = 0x33;
+	*(char *)0x487A35 = 0x74;
+	SokuLib::TamperNearJmp(0x487AAA, checkBE3);
 
 	*(const char **)0x47DEE5 = battleUpperPath1;
 
