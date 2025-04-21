@@ -17,12 +17,12 @@
     },
     "8b": {
         "ground": {
-            "cd": 330,
+            "cd": 240,
             "nb": 1,
             "action": 525
         },
         "air": {
-            "cd": 330,
+            "cd": 240,
             "nb": 1,
             "action": 525,
             "posY": 0
@@ -30,14 +30,14 @@
     },
     "8c": {
         "ground": {
-            "cd": 450,
+            "cd": 300,
             "nb": 1,
-            "action": 505
+            "action": 560
         },
         "air": {
-            "cd": 450,
+            "cd": 300,
             "nb": 1,
-            "action": 505,
+            "action": 560,
             "posY": 0
         }
     },

@@ -3059,7 +3059,7 @@ void selectConstructCommon(SokuLib::Select *This)
 		dat.object = nullptr;
 		dat.chrHandler.maxValue = 20;
 		dat.chrHandler.pos = 0;
-		while ((*(unsigned **)&This->offset_0x018[0x84])[dat.chrHandler.pos] != profileInfo.character)
+		while (This->characterIndices[dat.chrHandler.pos] != profileInfo.character)
 			dat.chrHandler.pos++;
 		dat.chrHandler.posCopy = dat.chrHandler.pos;
 		dat.palHandler.maxValue = 8;
@@ -3397,7 +3397,7 @@ void __fastcall updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 					dat.chrHandler.pos--;
 			}
 			SokuLib::playSEWaveBuffer(0x27);
-			info.character = *((SokuLib::Character *(__thiscall *)(const void *, int))0x420380)(&This->offset_0x018[0x80], dat.chrHandler.pos);
+			info.character = This->characterIndices[dat.chrHandler.pos];
 			sprintf(buffer, (char *)0x85785C, info.character);
 			SokuLib::textureMgr.deallocate(dat.portraitTexture);
 			if (!SokuLib::textureMgr.loadTexture(&dat.portraitTexture, buffer, &size.x, &size.y))
@@ -3438,7 +3438,7 @@ void __fastcall updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 			state = 0;
 			dat.cursorCounter = 60;
 			if ((&SokuLib::leftPlayerInfo)[i].character == SokuLib::CHARACTER_RANDOM) {
-				(&SokuLib::leftPlayerInfo)[i].character = *((SokuLib::Character *(__thiscall *)(const void *, int))0x420380)(&This->offset_0x018[0x80], (&This->leftCharInput)[i].pos);
+				(&SokuLib::leftPlayerInfo)[i].character = This->characterIndices[(&This->leftCharInput)[i].pos];
 				((void (__thiscall *)(void *, int, int))0x41FD80)(This, i, (&SokuLib::leftPlayerInfo)[i].character);
 			}
 		} else if (input->input.d == 1) {
@@ -3511,7 +3511,7 @@ void __fastcall updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 			SokuLib::playSEWaveBuffer(0x29);
 			state = 4;
 			if (info.character == SokuLib::CHARACTER_RANDOM) {
-				info.character = *((SokuLib::Character *(__thiscall *)(const void *, int))0x420380)(&This->offset_0x018[0x80], dat.chrHandler.pos);
+				info.character = This->characterIndices[dat.chrHandler.pos];
 				dat.charNameCounter = 15;
 			}
 		}
@@ -3521,15 +3521,17 @@ void __fastcall updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 void onChrSelectComplete()
 {
 	if (assists.first.character == SokuLib::CHARACTER_RANDOM)
+		// TODO: Get list of characters from the character select object
 		assists.first.character = static_cast<SokuLib::Character>(sokuRand(20));
 	if (assists.second.character == SokuLib::CHARACTER_RANDOM)
+		// TODO: Get list of characters from the character select object
 		assists.second.character = static_cast<SokuLib::Character>(sokuRand(20));
 }
 
 void __fastcall onStageSelectCancel(SokuLib::Select *This, int index)
 {
 	if ((&assists.first)[index].character == SokuLib::CHARACTER_RANDOM)
-		(&assists.first)[index].character = (*(SokuLib::Character **)&This->offset_0x018[0x84])[chrSelectExtra[index].chrHandler.pos];
+		(&assists.first)[index].character = This->characterIndices[chrSelectExtra[index].chrHandler.pos];
 }
 
 void __declspec(naked) onStageSelectCancel_hook()
@@ -5139,10 +5141,7 @@ void __fastcall handleBE3(SokuLib::v2::Player *This)
 {
 	This->renderInfos.zRotation = 0;
 	This->FUN_0046d950();
-	if (SokuLib::v2::GameDataManager::instance->players[currentIndex(This) + 2]->hp == 0)
-		This->setAction(SokuLib::ACTION_BE3);
-	else
-		This->setAction(SokuLib::ACTION_BE2);
+	This->setAction(SokuLib::ACTION_BE3);
 }
 
 unsigned doBE3RetAddr = 0x487A53;
@@ -5177,6 +5176,7 @@ void checkShock(SokuLib::v2::Player &chr, SokuLib::v2::Player &op, ChrInfo &info
 		else
 			info.burstCharges--;
 		chr.setAction(SokuLib::ACTION_BOMB);
+		info.meterReq = MAX_METER_REQ;
 		info.tagAntiBuffer = 20;
 		chr.createEffect(69, chr.position.x, chr.position.y + 120, 1, 1);
 		return;
@@ -5900,7 +5900,7 @@ void __declspec(naked) takeOpponentCorrection()
 }
 
 const double profileNameY = 57;
-const double profileNameLeftX = 186;
+const double profileNameLeftX = 196;
 const double profileNameRightX = 640 - profileNameLeftX;
 
 const float sanaeKanakoLeftGui = 96;      // (+40)
@@ -5961,6 +5961,88 @@ void __declspec(naked) fixupSanaeSuwakoCrossDisabled()
 		FLD        dword ptr [EAX]
 		FSTP       dword ptr [ESI + 0xF0]
 		JMP        [fixupSanaeSuwakoCrossDisabled_ret]
+	}
+}
+
+unsigned sakuyaA236BLvl0_hook_ret = 0x4F48AA;
+unsigned sakuyaA236CLvl0_hook_ret = 0x4F3889;
+
+void __fastcall sakuyaA236BLvl0(SokuLib::v2::PlayerSakuya *This)
+{
+	float params[] = {0, 15, 0};
+
+	for (int i = 0; i < 2; i++)
+		This->createObject(
+			0x331,
+			This->direction * (SokuLib::sin(i * 45.0 + 67.5) * 150.0 - 50.0) + This->position.x,
+			i * 40.0 + This->position.y + 80.0, This->direction,
+			1, params
+		);
+	This->createObject(
+		0x331, This->direction * (SokuLib::rand(100) + 50.0) + This->position.x,
+		SokuLib::rand(250) + This->position.y, This->direction,
+		1, params
+	);
+}
+
+void __fastcall sakuyaA236CLvl0(SokuLib::v2::PlayerSakuya *This)
+{
+	float params[] = {0, 15, 0};
+
+	for (int i = 0; i < 3; i++) {
+		params[0] = 30.f - i * 30.f;
+		This->createObject(
+			0x331,
+			This->direction * (SokuLib::sin(i * 45.0 + 45) * 150.f - 50.f) + This->position.x,
+			i * 40.0 + This->position.y + 60.0, This->direction,
+			1, params
+		);
+	}
+	for (int i = 0; i < 2; i++) {
+		params[0] = 15.f - i * 30.f;
+		This->createObject(
+			0x331,
+			This->direction * (SokuLib::sin(i * 60.0 + 60.0) * 120.f - 50.f) + This->position.x,
+			i * 40.0 + This->position.y + 80.0, This->direction,
+			1, params
+		);
+	}
+}
+
+void __declspec(naked) sakuyaA236BLvl0_hook()
+{
+	__asm {
+		MOV ECX, ESI
+		CALL sakuyaA236BLvl0
+		JMP [sakuyaA236BLvl0_hook_ret]
+	}
+}
+
+void __declspec(naked) sakuyaA236CLvl0_hook()
+{
+	__asm {
+		MOV ECX, ESI
+		CALL sakuyaA236CLvl0
+		JMP [sakuyaA236CLvl0_hook_ret]
+	}
+}
+
+unsigned isSpecRet = 0x42AE5F;
+unsigned isNotSpecRet = 0x42ADF8;
+
+void __declspec(naked) disableFKeysSpec()
+{
+	__asm {
+		MOV EAX, [SokuLib::mainMode]
+		MOV EAX, [EAX]
+		CMP EAX, 6 // BATTLE_MODE_VSWATCH
+		MOV EAX, 0
+		JE spec
+		TEST ESI, 0x8000
+		JMP [isNotSpecRet]
+	spec:
+		MOV word ptr [EDI + 0x68], CX
+		JMP [isSpecRet]
 	}
 }
 
@@ -6081,6 +6163,10 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	// Suwako disabled cross
 	*(const float **)0x760667 = &sanaeSuwakoLeftBarGui;
 	SokuLib::TamperNearJmp(0x760686, fixupSanaeSuwakoCrossDisabled);
+
+	// A236
+	SokuLib::TamperNearJmpOpr(0x4F2AA9, sakuyaA236BLvl0_hook);
+	SokuLib::TamperNearJmpOpr(0x4F31F0, sakuyaA236CLvl0_hook);
 
 	*(char *)0x4552C2 = 0x56;
 	SokuLib::TamperNearCall(0x4552C3, generateClientDecks);
@@ -6284,6 +6370,8 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	*(unsigned short *)0x42DA17 = 0b101111111111;
 	*(unsigned short *)0x42ADEE = 0b101111111111;
 	*(unsigned short *)0x42AE91 = 0b101111111111;
+	SokuLib::TamperNearJmp(0x42ADF2, disableFKeysSpec);
+	*(char *)0x42ADF7 = 0x90;
 
 
 	// On hit

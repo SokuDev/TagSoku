@@ -28,14 +28,14 @@
     },
     "8c": {
         "ground": {
-            "cd": 300,
+            "cd": 450,
             "nb": 1,
-            "action": 560
+            "action": 510
         },
         "air": {
-            "cd": 300,
+            "cd": 450,
             "nb": 1,
-            "action": 560,
+            "action": 510,
             "posY": 0
         }
     },

@@ -21,35 +21,35 @@
     },
     "8b": {
         "ground": {
-            "cd": 270,
+            "cd": 240,
             "nb": 1,
-            "action": 560,
-            "offsetX": 0,
+            "action": 540,
+            "offsetX": 50,
             "cond": "end"
         },
         "air": {
-            "cd": 270,
+            "cd": 240,
             "nb": 1,
-            "action": 560,
+            "action": 540,
             "posY": 0,
-            "offsetX": 0,
+            "offsetX": 50,
             "cond": "end"
         }
     },
     "8c": {
         "ground": {
-            "cd": 240,
+            "cd": 270,
             "nb": 1,
-            "action": 540,
-            "offsetX": 50,
+            "action": 560,
+            "offsetX": 0,
             "cond": "end"
         },
         "air": {
-            "cd": 240,
+            "cd": 270,
             "nb": 1,
-            "action": 540,
+            "action": 560,
             "posY": 0,
-            "offsetX": 50,
+            "offsetX": 0,
             "cond": "end"
         }
     },
