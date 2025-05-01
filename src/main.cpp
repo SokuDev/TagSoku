@@ -362,9 +362,11 @@ struct ExtraChrSelectData {
 	SokuLib::Sprite portraitSprite;
 	SokuLib::Sprite circleSprite;
 	SokuLib::Sprite gearSprite;
+	SokuLib::Sprite nameSprite;
 	CEffectManager effectMgr;
 	int baseNameY = 0;
 	int portraitTexture = 0;
+	int nameTexture = 0;
 	int circleTexture = 0;
 	int charNameCounter;
 	int portraitCounter;
@@ -407,6 +409,7 @@ struct ChrInfo {
 	bool ending = false;
 	bool ended = false;
 	bool callInit = true;
+	bool actualKeys = false;
 	unsigned char burstCharges = 0;
 	unsigned char activePose = 0;
 	unsigned short meterReq = 0;
@@ -432,6 +435,7 @@ struct ChrInfo {
 	SokuLib::Action end;
 	SokuLib::Action action;
 	SokuLib::Character chr;
+	SokuLib::Character opponent;
 	SokuLib::KeyInput startKeys;
 	SokuLib::KeyInput allowedKeys;
 	SokuLib::KeyInput releasedKeys;
@@ -447,6 +451,7 @@ struct ChrInfo {
 	ChrInfo &operator=(const ChrInfo &other) {
 		this->blockedByWall = other.blockedByWall;
 		this->canControl = other.canControl;
+		this->actualKeys = other.actualKeys;
 		this->gotHit = other.gotHit;
 		this->started = other.started;
 		this->starting = other.starting;
@@ -478,6 +483,7 @@ struct ChrInfo {
 		this->end = other.end;
 		this->action = other.action;
 		this->chr = other.chr;
+		this->opponent = other.opponent;
 		this->startKeys = other.startKeys;
 		this->allowedKeys = other.allowedKeys;
 		this->releasedKeys = other.releasedKeys;
@@ -499,8 +505,20 @@ struct ChrData {
 	SpriteEx sprite;
 	std::vector<unsigned short> spells;
 	unsigned shownCost;
+	unsigned stanceIdle;
 	bool hasStance;
 	bool canFly;
+};
+
+struct ChrReplaceSpell {
+	std::pair<std::optional<ChrInfo>, std::optional<ChrInfo>> data;
+	unsigned cost;
+	unsigned card;
+};
+
+struct ChrFullData {
+	std::array<ChrData, 3> config;
+	std::map<unsigned, ChrReplaceSpell> replaceSpells;
 };
 
 static const char *keyConfigDatPath = "data/profile/keyconfig/keyconfig_switch.dat";
@@ -568,7 +586,7 @@ static bool forceCardCost = false;
 static std::string lastLoadedProfile;
 static std::string loadedProfiles_[2];
 static std::pair<ChrInfo, ChrInfo> currentChr;
-static std::vector<std::array<ChrData, 3>> loadedData{22};
+static std::map<unsigned, ChrFullData> loadedData;
 static SokuLib::DrawUtils::Sprite gagesEffects[3];
 static unsigned char loadouts[4] = {1, 1, 1, 1};
 static SokuLib::InputHandler loadoutHandler[4];
@@ -633,13 +651,18 @@ static std::map<unsigned char, unsigned> nbSkills{
 	{ SokuLib::CHARACTER_SUWAKO, 12 }
 };
 
+struct Loadouts {
+	std::array<std::array<unsigned, 5>, 3> loadout;
+	std::map<unsigned, unsigned> cards;
+};
+
 std::array<SokuLib::Deque<unsigned short>, 4> netplayDeck;
 static std::pair<SokuLib::PlayerInfo, SokuLib::PlayerInfo> assists = {
 	SokuLib::PlayerInfo{SokuLib::CHARACTER_CIRNO, 0, 0, 0, 0, {}, nullptr},
 	SokuLib::PlayerInfo{SokuLib::CHARACTER_MARISA, 1, 0, 0, 0, {}, nullptr}
 };
-static void (*og_loadDat)(const char *path);
-static std::map<unsigned, std::array<std::array<unsigned, 5>, 3>> loadedLoadouts;
+static bool (__thiscall *og_sokuSetup)(void *, void *);
+static std::map<unsigned, Loadouts> loadedLoadouts;
 static std::mt19937 random;
 
 #ifdef _DEBUG
@@ -731,10 +754,10 @@ unsigned int sokuRand(int max)
 	return random() % max;
 }
 
-void loadExtraDatFiles(const char *path)
+bool __fastcall loadExtraDatFiles(void *This, int _, void *data)
 {
-	og_loadDat(path);
 	SokuLib::appendDatFile((std::string(modFolder) + "/assets.dat").c_str());
+	return og_sokuSetup(This, data);
 }
 
 void loadSoku2CSV(LPWSTR path)
@@ -829,6 +852,8 @@ void loadSoku2Config()
 			*result = '\\';
 		printf("Soku2 dll is at %S\n", module_path);
 		PathRemoveFileSpecW(module_path);
+		for (int i = 0; module_path[i]; i++)
+			soku2Dir[i] = module_path[i];
 		printf("Found Soku2 module folder at %S\n", module_path);
 		PathAppendW(module_path, L"\\config\\info\\characters.csv");
 		loadSoku2CSV(module_path);
@@ -1184,6 +1209,8 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 		chr.cardName = 0;
 	}
 	if (mgr->renderInfos.yRotation == 90) {
+		if (loadedData[chr.chr].config[chr.loadoutIndex].stanceIdle)
+			chr.currentStance = (*(int *)((char *)mgr + loadedData[chr.chr].config[chr.loadoutIndex].stanceIdle)) != 0;
 		if (!mgr->keyManager)
 			mgr->setAction(SokuLib::ACTION_IDLE);
 		mgr->grabInvulTimer = 2;
@@ -1198,9 +1225,17 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 		)
 			mgr->setAction(SokuLib::ACTION_IDLE);
 		if (SokuLib::mainMode == SokuLib::BATTLE_MODE_PRACTICE) {
+			if (loadedData[chr.chr].config[chr.loadoutIndex].spells.front() == 21) {
+				auto &spells = loadedData[chr.chr].replaceSpells;
+				auto it = spells.find(mgr->gameData.opponent->characterIndex);
+
+				if (it == spells.end())
+					it = spells.find(SokuLib::CHARACTER_RANDOM);
+				chr.meter = it->second.cost * ASSIST_CARD_METER;
+			} else
+				chr.meter = loadedData[chr.chr].config[chr.loadoutIndex].shownCost * ASSIST_CARD_METER;
 			chr.cd = 0;
 			chr.meterReq = 0;
-			chr.meter = loadedData[chr.chr][chr.loadoutIndex].shownCost * ASSIST_CARD_METER;
 		}
 
 		int mul = 1;
@@ -1213,7 +1248,7 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 			chr.cd -= mul;
 		if (mgr->frameState.actionId < SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN)
 			mgr->position = main->position;
-		if (loadedData[chr.chr][chr.loadoutIndex].canFly) {
+		if (loadedData[chr.chr].config[chr.loadoutIndex].canFly) {
 			mgr->position.y += 10;
 			mgr->speed.y = 0;
 			mgr->gravity.y = 0;
@@ -1291,23 +1326,7 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 		}
 		chr.started = true;
 	} else if (chr.starting) {
-		bool fine = true;
-
-		for (int i = 0; i < 8; i++) {
-			int actual = ((int *) &mgr->keyManager->keymapManager->input)[i];
-			int expected = ((int *) &chr.startKeys)[i];
-
-			if (expected == 0)
-				continue;
-			if (actual < 0 && expected < 0)
-				continue;
-			if (actual > 0 && expected > 0)
-				continue;
-			fine = false;
-			break;
-		}
-		chr.startTimer++;
-		if (chr.startTimer > chr.startMax || (chr.startTimer >= chr.startMin && !fine)) {
+		if (chr.startTimer > chr.startMax) {
 			chr.nb--;
 			mgr->dashTimer = 0;
 			if (chr.callInit)
@@ -1319,6 +1338,7 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 			chr.starting = false;
 			chr.ending = false;
 			chr.ended = false;
+			chr.startTimer = 0;
 			if (chr.cutscene == 1)
 				displaySkillLevelUpEffect(*mgr);
 			if (chr.speed.x)
@@ -1397,7 +1417,8 @@ void updateObject(SokuLib::v2::Player *main, SokuLib::v2::Player *mgr, ChrInfo &
 				mgr->renderInfos.yRotation += 10;
 			chr.ended = true;
 		}
-	}
+	} else
+		chr.startTimer++;
 }
 
 static void initSkillUpgrade(ChrInfo &chr, SokuLib::Character character, SokuLib::v2::Player &mgr, SokuLib::v2::Player &main, unsigned index)
@@ -1517,7 +1538,7 @@ static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2:
 	}
 }
 
-bool initAttack(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &chr, std::pair<std::optional<ChrInfo>, std::optional<ChrInfo>> &data)
+bool initAttack(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &chr, const std::pair<std::optional<ChrInfo>, std::optional<ChrInfo>> &data)
 {
 	auto &atk = main->position.y == 0 ? data.first : data.second;
 
@@ -1584,7 +1605,7 @@ bool initAttack(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &ch
 	return static_cast<bool>(atk);
 }
 
-void assisterAttacks(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &chr, ChrData &data)
+void assisterAttacks(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInfo &chr, ChrData &data, const std::map<unsigned int, ChrReplaceSpell> &replace)
 {
 	if (SokuLib::getBattleMgr().matchState == 1)
 		return;
@@ -1600,13 +1621,21 @@ void assisterAttacks(SokuLib::v2::Player *main, SokuLib::v2::Player *obj, ChrInf
 	std::string buttons[] = {"a", "b", "c", "d", "s"};
 	auto elems = &data.elems;
 
-	if (data.hasStance)
+	if (data.hasStance || data.stanceIdle)
 		for (auto &buttonName : buttons)
 			buttonName += std::to_string(chr.currentStance);
 	// Spell
 	if (main->keyManager->keymapManager->input.verticalAxis > 0) {
-		if (elems->find("5" + buttons[4]) != elems->end())
-			initAttack(main, obj, chr, (*elems)["5" + buttons[4]]);
+		if (elems->find("5" + buttons[4]) != elems->end()) {
+			auto it = replace.find(main->gameData.opponent->characterIndex);
+
+			if (it == replace.end())
+				it = replace.find(SokuLib::CHARACTER_RANDOM);
+			if (it == replace.end() || data.spells.front() != 21)
+				initAttack(main, obj, chr, (*elems)["5" + buttons[4]]);
+			else
+				initAttack(main, obj, chr, it->second.data);
+		}
 		return;
 	}
 	// Skill 1
@@ -2047,7 +2076,7 @@ void renderDeck(SokuLib::Character chr, unsigned select, const std::vector<Deck>
 	sprite.draw();
 }
 
-void renderLoadout(SokuLib::Character chr, unsigned select, SokuLib::Vector2i pos)
+void renderLoadout(SokuLib::Character chr, unsigned select, SokuLib::Vector2i pos, SokuLib::Character opChr)
 {
 	auto it = loadedLoadouts.find(chr);
 
@@ -2057,7 +2086,7 @@ void renderLoadout(SokuLib::Character chr, unsigned select, SokuLib::Vector2i po
 		pos.x += 95;
 		pos.y += 15;
 		for (int j = 3; j >= 0; j--) {
-			auto cardId = it->second[i][j];
+			auto cardId = it->second.loadout[i][j];
 			SokuLib::DrawUtils::Sprite &sprite = (cardId < 100 ? cardsTextures[SokuLib::CHARACTER_RANDOM][cardId] : cardsTextures[chr][cardId]);
 
 			pos.x -= 20 + 15 * (j == 0);
@@ -2085,7 +2114,7 @@ void renderLoadout(SokuLib::Character chr, unsigned select, SokuLib::Vector2i po
 			sprite.setRotation(0);
 
 			if (cardId >= 200) {
-				SokuLib::DrawUtils::Sprite &costSprite = cardBlank[it->second[i][4] - 1];
+				SokuLib::DrawUtils::Sprite &costSprite = cardBlank[it->second.loadout[i][4] - 1];
 
 				costSprite.setPosition(pos);
 				if (j == 0)
@@ -2102,7 +2131,31 @@ void renderLoadout(SokuLib::Character chr, unsigned select, SokuLib::Vector2i po
 				costSprite.draw();
 				costSprite.setRotation(0);
 			}
+			if (cardId == 21) {
+				auto it2 = it->second.cards.find(opChr);
 
+				if (it2 == it->second.cards.end())
+					it2 = it->second.cards.find(SokuLib::CHARACTER_RANDOM);
+
+				auto &s = cardsTextures[chr][it2->second];
+
+				if (j == 0)
+					s.setSize({30, 48});
+				else
+					s.setSize({20, 32});
+				s.setRotation(-M_PI / 6);
+				s.rect.top = s.rect.left = 0;
+				s.rect.width = s.texture.getSize().x;
+				s.rect.height = s.texture.getSize().y;
+				s.setPosition(pos);
+				s.tint = SokuLib::Color::White;
+				if (i != select)
+					s.tint.a = 0x60;
+				else
+					s.tint.a = 0xC0;
+				s.draw();
+				s.setRotation(0);
+			}
 		}
 		pos.x -= 15;
 		pos.y += 40;
@@ -2133,13 +2186,13 @@ void selectRenderCommon(SokuLib::Select *This)
 	}
 
 	if (This->leftSelectionStage == 3)
-		renderLoadout(SokuLib::leftChar, loadoutHandler[0].pos, {45, 28});
+		renderLoadout(SokuLib::leftChar, loadoutHandler[0].pos, {45, 28}, SokuLib::rightChar);
 	if (This->rightSelectionStage == 3)
-		renderLoadout(SokuLib::rightChar, loadoutHandler[1].pos, {45, 314});
+		renderLoadout(SokuLib::rightChar, loadoutHandler[1].pos, {45, 314}, SokuLib::leftChar);
 	if (This->leftSelectionStage == 6)
-		renderLoadout(assists.first.character, loadoutHandler[2].pos, {195, 28});
+		renderLoadout(assists.first.character, loadoutHandler[2].pos, {195, 28}, This->rightSelectionStage < 4 ? SokuLib::CHARACTER_RANDOM : assists.second.character);
 	if (This->rightSelectionStage == 6)
-		renderLoadout(assists.second.character, loadoutHandler[3].pos, {195, 314});
+		renderLoadout(assists.second.character, loadoutHandler[3].pos, {195, 314},  This->leftSelectionStage < 4 ? SokuLib::CHARACTER_RANDOM : assists.first.character);
 }
 
 int __fastcall CSelect_OnRender(SokuLib::Select *This)
@@ -2168,7 +2221,7 @@ int __fastcall CSelectSV_OnRender(SokuLib::SelectServer *This)
 
 void displayAssistGage(ChrInfo &chr, int x, SokuLib::Vector2i bar, SokuLib::Vector2i cross, bool mirror)
 {
-	auto &sprite = loadedData[chr.chr][chr.loadoutIndex];
+	auto &sprite = loadedData[chr.chr].config[chr.loadoutIndex];
 	auto &s = sprite.sprite;
 
 	s.clearTransform();
@@ -2442,7 +2495,7 @@ void loadElemJson(std::optional<ChrInfo> &info, nlohmann::json &json, SokuLib::C
 	e.startup = json.contains("startup") && json["startup"].is_number() ? json["startup"].get<unsigned>() : 0;
 	e.cardName = json.contains("cardName") && json["cardName"].is_number() ? json["cardName"].get<unsigned>() : 0;
 	e.recovery = json.contains("recovery") && json["recovery"].is_number() ? json["recovery"].get<unsigned>() : 0;
-	e.startMin = json.contains("startMin") && json["startMin"].is_number() ? json["startMin"].get<unsigned>() : 10;
+	e.startMin = json.contains("startMin") && json["startMin"].is_number() ? json["startMin"].get<unsigned>() : 0;
 	e.startMax = json.contains("startMax") && json["startMax"].is_number() ? json["startMax"].get<unsigned>() : 30;
 	if (json.contains("start") && json["start"].is_number())
 		e.startAction = json["start"];
@@ -2451,6 +2504,7 @@ void loadElemJson(std::optional<ChrInfo> &info, nlohmann::json &json, SokuLib::C
 	if (json.contains("collisionLimit") && json["collisionLimit"].is_number())
 		e.collisionLimit = json["collisionLimit"];
 	e.nb = json["nb"];
+	e.actualKeys = json.contains("actualKeys") && json["actualKeys"].is_boolean() && json["actualKeys"];
 	e.canControl = json.contains("canControl") && json["canControl"].is_boolean() && json["canControl"];
 	e.blockedByWall = json.contains("wall") && json["wall"].is_boolean() && json["wall"];
 	e.action = json["action"];
@@ -2486,7 +2540,7 @@ void loadElemJson(std::optional<ChrInfo> &info, nlohmann::json &json, SokuLib::C
 
 void loadAssistData(int i, int index)
 {
-	std::string basePath = i > SokuLib::CHARACTER_NAMAZU ? (std::string(soku2Dir) + "/config/tag/") : (std::string(modFolder) + "/assets/");
+	std::string basePath = std::string(modFolder) + "/assets/";
 	const char *chrName = (i == SokuLib::CHARACTER_RANDOM || i == SokuLib::CHARACTER_NAMAZU) ? "Empty" : reinterpret_cast<char *(*)(int)>(0x43f3f0)(i);
 	SokuLib::DrawUtils::Texture texture;
 	nlohmann::json j;
@@ -2494,10 +2548,10 @@ void loadAssistData(int i, int index)
 	std::ifstream stream;
 
 	if (texture.loadFromGame(("data/character/" + std::string(chrName) + "/gage.bmp").c_str()) || texture.loadFromGame("data/character/common/gage.bmp")) {
-		loadedData[i][loadouts[index]].sprite.setTexture(texture.releaseHandle(), 0, 0, texture.getSize().x, texture.getSize().y);
-		loadedData[i][loadouts[index]].size = texture.getSize().to<int>();
+		loadedData[i].config[loadouts[index]].sprite.setTexture(texture.releaseHandle(), 0, 0, texture.getSize().x, texture.getSize().y);
+		loadedData[i].config[loadouts[index]].size = texture.getSize().to<int>();
 	}
-	loadedData[i][loadouts[index]].elems.clear();
+	loadedData[i].config[loadouts[index]].elems.clear();
 	stream.open(path);
 	printf("Loading %s\n", path.c_str());
 	if (stream.fail()) {
@@ -2534,10 +2588,11 @@ void loadAssistData(int i, int index)
 		};
 
 		stream >> j;
-		loadedData[i][loadouts[index]].spells = j.contains("spells") && j["spells"].is_array() ? j["spells"].get<std::vector<unsigned short>>() : std::vector<unsigned short>{};
-		loadedData[i][loadouts[index]].shownCost = j.contains("shownCost") && j["shownCost"].is_number() ? j["shownCost"].get<unsigned>() : 0;
-		loadedData[i][loadouts[index]].canFly = j.contains("canFly") && j["canFly"].is_boolean() && j["canFly"].get<bool>();
-		loadedData[i][loadouts[index]].hasStance = j.contains("hasStance") && j["hasStance"].is_boolean() && j["hasStance"].get<bool>();
+		loadedData[i].config[loadouts[index]].spells = j.contains("spells") && j["spells"].is_array() ? j["spells"].get<std::vector<unsigned short>>() : std::vector<unsigned short>{};
+		loadedData[i].config[loadouts[index]].shownCost = j.contains("shownCost") && j["shownCost"].is_number() ? j["shownCost"].get<unsigned>() : 0;
+		loadedData[i].config[loadouts[index]].canFly = j.contains("canFly") && j["canFly"].is_boolean() && j["canFly"].get<bool>();
+		loadedData[i].config[loadouts[index]].hasStance = j.contains("hasStance") && j["hasStance"].is_boolean() && j["hasStance"].get<bool>();
+		loadedData[i].config[loadouts[index]].stanceIdle = j.contains("stanceIdle") && j["stanceIdle"].is_number() ? j["stanceIdle"].get<unsigned>() : 0;
 		for (auto &a : j.items()) {
 			bool b = false;
 
@@ -2551,7 +2606,7 @@ void loadAssistData(int i, int index)
 				continue;
 			}
 
-			auto &elem = loadedData[i][loadouts[index]].elems[a.key()];
+			auto &elem = loadedData[i].config[loadouts[index]].elems[a.key()];
 			auto &val = a.value();
 
 			if (val.contains("ground") && val["ground"].is_object())
@@ -2562,17 +2617,62 @@ void loadAssistData(int i, int index)
 	} catch (std::exception &e) {
 		puts(e.what());
 		MessageBox(SokuLib::window, e.what(), "Loading error", MB_ICONERROR);
+		return;
+	}
+	path = basePath + chrName + "/spellReplacement.json";
+
+	std::ifstream stream2{path};
+
+	printf("Loading %s\n", path.c_str());
+	if (!stream2) {
+		printf("Failed to load %s\n", path.c_str());
+		return;
+	}
+	try {
+		stream2 >> j;
+		for (auto &a : j.items()) {
+			bool b = false;
+			unsigned chrIndex;
+
+			if (a.key() == "default")
+				chrIndex = SokuLib::CHARACTER_RANDOM;
+			else
+				chrIndex = std::stoul(a.key());
+
+			auto &elem = loadedData[i].replaceSpells[chrIndex];
+			auto &val = a.value();
+
+			if (val.contains("ground") && val["ground"].is_object())
+				loadElemJson(elem.data.first, val["ground"], static_cast<SokuLib::Character>(i), loadouts[index]);
+			if (val.contains("air") && val["air"].is_object())
+				loadElemJson(elem.data.second, val["air"], static_cast<SokuLib::Character>(i), loadouts[index]);
+			elem.cost = val["cost"];
+			elem.card = val["card"];
+		}
+	} catch (std::exception &e) {
+		puts(e.what());
+		MessageBox(SokuLib::window, e.what(), "Loading error", MB_ICONERROR);
 	}
 }
 
 void __stdcall loadDeckData(char *charName, void *csvFile, SokuLib::DeckInfo &deck, int param4, SokuLib::Deque<short> &newDeck)
 {
+	static bool skip = false;
+
+	if (skip) {
+		skip = false;
+		return s_origLoadDeckData(charName, csvFile, deck, param4, newDeck);
+	}
+
 	unsigned chr = chrLoadingIndex == 0 ? SokuLib::leftChar : (chrLoadingIndex == 1 ? SokuLib::rightChar : (&assists.first)[chrLoadingIndex - 2].character);
-	auto spells = loadedData[chr][loadouts[chrLoadingIndex]].spells;
+	auto spells = loadedData[chr].config[loadouts[chrLoadingIndex]].spells;
 
 	if (spells.empty()) {
 		printf("No fake deck for %s:%i (Index %i, Id id)\n", charName, loadouts[chrLoadingIndex], chrLoadingIndex, chr);
 		chrLoadingIndex++;
+		// FIXME:
+		if (strcmp(charName, "mamizou") == 0)
+			skip = true;
 		return s_origLoadDeckData(charName, csvFile, deck, param4, newDeck);
 	}
 
@@ -2585,7 +2685,8 @@ void __stdcall loadDeckData(char *charName, void *csvFile, SokuLib::DeckInfo &de
 		cards[i] = newDeck[i];
 	newDeck.clear();
 	for (auto &id : spells)
-		newDeck.push_back(id);
+		if (id >= 200)
+			newDeck.push_back(id);
 	for (int i = 0; newDeck.size() != 20; i++)
 		newDeck.push_back(i);
 	s_origLoadDeckData(charName, csvFile, deck, param4, newDeck);
@@ -2594,6 +2695,9 @@ void __stdcall loadDeckData(char *charName, void *csvFile, SokuLib::DeckInfo &de
 		newDeck.push_back(cards[i]);
 	delete[] cards;
 	s_origLoadDeckData(charName, csvFile, deck, param4, newDeck);
+	// FIXME:
+	if (strcmp(charName, "mamizou") == 0)
+		skip = true;
 }
 
 extern "C" __declspec(dllexport) bool CheckVersion(const BYTE hash[16])
@@ -2718,8 +2822,17 @@ void displayGrayedOut(const SokuLib::DrawUtils::Sprite &sprite)
 	::FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
 }
 
-void displayCard(SokuLib::v2::Player *mgr, unsigned shown, const ChrInfo &info, bool side, unsigned cardId)
+void displayCard(SokuLib::v2::Player *mgr, unsigned shown, const ChrInfo &info, bool side, unsigned cardId, const std::map<unsigned, ChrReplaceSpell> &spells)
 {
+	if (cardId == 21) {
+		auto it = spells.find(mgr->gameData.opponent->characterIndex);
+
+		if (it == spells.end())
+			it = spells.find(SokuLib::CHARACTER_RANDOM);
+		shown = it->second.cost;
+		cardId = it->second.card;
+	}
+
 	unsigned cost = shown;
 
 	shown -= mgr->weatherId == SokuLib::WEATHER_CLOUDY;
@@ -2894,11 +3007,13 @@ int __fastcall onHudRender(SokuLib::v2::InfoManager *This)
 		}
 	}
 
-	auto &leftData = loadedData[currentChr.first.chr][currentChr.first.loadoutIndex];
-	auto &rightData = loadedData[currentChr.second.chr][currentChr.second.loadoutIndex];
+	auto &leftData = loadedData[currentChr.first.chr].config[currentChr.first.loadoutIndex];
+	auto &rightData = loadedData[currentChr.second.chr].config[currentChr.second.loadoutIndex];
+	auto &leftSpell = loadedData[currentChr.first.chr].replaceSpells;
+	auto &rightSpell = loadedData[currentChr.second.chr].replaceSpells;
 
-	displayCard(SokuLib::v2::GameDataManager::instance->players[2], leftData.shownCost, currentChr.first, false, leftData.spells.front());
-	displayCard(SokuLib::v2::GameDataManager::instance->players[3], rightData.shownCost, currentChr.second, true, rightData.spells.front());
+	displayCard(SokuLib::v2::GameDataManager::instance->players[2], leftData.shownCost,  currentChr.first, false, leftData.spells.front(),  leftSpell);
+	displayCard(SokuLib::v2::GameDataManager::instance->players[3], rightData.shownCost, currentChr.second, true, rightData.spells.front(), rightSpell);
 	return ret;
 }
 
@@ -3057,7 +3172,7 @@ void selectConstructCommon(SokuLib::Select *This)
 
 		dat.needInit = true;
 		dat.object = nullptr;
-		dat.chrHandler.maxValue = 20;
+		dat.chrHandler.maxValue = This->characterIndices.size() - 1;
 		dat.chrHandler.pos = 0;
 		while (This->characterIndices[dat.chrHandler.pos] != profileInfo.character)
 			dat.chrHandler.pos++;
@@ -3080,17 +3195,21 @@ void selectConstructCommon(SokuLib::Select *This)
 		dat.deckHandler.pos = profileInfo.deck;
 		// data/scene/select/character/09b_character/character_%02d.bmp
 		sprintf(buffer, (char *)0x85785C, profileInfo.character);
-		if (!SokuLib::textureMgr.loadTexture(&ret, buffer, &size.x, &size.y))
+		if (!SokuLib::textureMgr.loadTexture(&dat.portraitTexture, buffer, &size.x, &size.y))
 			printf("Failed to load %s\n", buffer);
-		dat.portraitSprite.setTexture2(ret, 0, 0, size.x, size.y);
-		dat.portraitTexture = ret;
+		dat.portraitSprite.setTexture2(dat.portraitTexture, 0, 0, size.x, size.y);
+		// data/scene/select/character/01b_name/name_%02d.bmp
+		sprintf(buffer, (char *)0x857C80 , profileInfo.character);
+		if (!SokuLib::textureMgr.loadTexture(&dat.nameTexture, buffer, &size.x, &size.y))
+			printf("Failed to load %s\n", buffer);
+		dat.nameSprite.setTexture2(dat.nameTexture, 0, 0, size.x, size.y);
 	}
 	loadedLoadouts.clear();
 	for (auto &chr : characterSpellCards) {
 		if (chr.first == SokuLib::CHARACTER_RANDOM || chr.first == SokuLib::CHARACTER_NAMAZU)
 			continue;
 
-		std::string basePath = chr.first > SokuLib::CHARACTER_NAMAZU ? (std::string(soku2Dir) + "/config/tag/") : (std::string(modFolder) + "/assets/");
+		std::string basePath = std::string(modFolder) + "/assets/";
 		const char *chrName = reinterpret_cast<char *(*)(int)>(0x43f3f0)(chr.first);
 		nlohmann::json j;
 		std::string path = basePath + chrName + "/loadouts.json";
@@ -3100,7 +3219,19 @@ void selectConstructCommon(SokuLib::Select *This)
 			if (!stream)
 				throw std::invalid_argument(path + ": " + strerror(errno));
 			stream >> j;
-			loadedLoadouts[chr.first] = j;
+			loadedLoadouts[chr.first].loadout = j;
+			path = basePath + chrName + "/spellReplacementSmall.json";
+
+			std::ifstream stream2{path};
+
+			if (!stream2)
+				continue;
+			stream2 >> j;
+			for (auto &elem : j.items()) {
+				unsigned index = elem.key() == "default" ? SokuLib::CHARACTER_RANDOM : std::stoul(elem.key());
+
+				loadedLoadouts[chr.first].cards[index] = elem.value();
+			}
 		} catch (std::exception &e) {
 			printf("Failed to load loadouts for %s: %s\n", chrName, e.what());
 		}
@@ -3166,7 +3297,7 @@ void __fastcall renderChrSelectChrName(SokuLib::Select *This, int index)
 	else
 		offset = (dat.charNameCounter * dat.charNameCounter) / (15.f * 15.f);
 
-	This->charNameSprites[info.character == SokuLib::CHARACTER_RANDOM ? 20 : info.character].render(offset * 300 + dat.name->x2, dat.name->y2);
+	dat.nameSprite.render(offset * 300 + dat.name->x2, dat.name->y2);
 	if (dat.object && info.character != SokuLib::CHARACTER_RANDOM) {
 		if (dat.chrCounter <= 0)
 			offset = 0;
@@ -3398,11 +3529,19 @@ void __fastcall updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 			}
 			SokuLib::playSEWaveBuffer(0x27);
 			info.character = This->characterIndices[dat.chrHandler.pos];
+
 			sprintf(buffer, (char *)0x85785C, info.character);
 			SokuLib::textureMgr.deallocate(dat.portraitTexture);
 			if (!SokuLib::textureMgr.loadTexture(&dat.portraitTexture, buffer, &size.x, &size.y))
 				printf("Failed to load %s\n", buffer);
 			dat.portraitSprite.setTexture2(dat.portraitTexture, 0, 0, size.x, size.y);
+
+			sprintf(buffer, (char *)0x857C80, info.character);
+			SokuLib::textureMgr.deallocate(dat.nameTexture);
+			if (!SokuLib::textureMgr.loadTexture(&dat.nameTexture, buffer, &size.x, &size.y))
+				printf("Failed to load %s\n", buffer);
+			dat.nameSprite.setTexture2(dat.nameTexture, 0, 0, size.x, size.y);
+
 			dat.portraitCounter = 15;
 			dat.charNameCounter = 15;
 			dat.cursorCounter = 30;
@@ -3446,6 +3585,11 @@ void __fastcall updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 			state = 7;
 			info.character = SokuLib::CHARACTER_RANDOM;
 			dat.charNameCounter = 15;
+			sprintf(buffer, (char *)0x857C80, SokuLib::CHARACTER_RANDOM);
+			SokuLib::textureMgr.deallocate(dat.nameTexture);
+			if (!SokuLib::textureMgr.loadTexture(&dat.nameTexture, buffer, &size.x, &size.y))
+				printf("Failed to load %s\n", buffer);
+			dat.nameSprite.setTexture2(dat.nameTexture, 0, 0, size.x, size.y);
 		}
 		break;
 	case 5:
@@ -3513,6 +3657,11 @@ void __fastcall updateCharacterSelect2(SokuLib::Select *This, unsigned i)
 			if (info.character == SokuLib::CHARACTER_RANDOM) {
 				info.character = This->characterIndices[dat.chrHandler.pos];
 				dat.charNameCounter = 15;
+				sprintf(buffer, (char *)0x857C80, info.character);
+				SokuLib::textureMgr.deallocate(dat.nameTexture);
+				if (!SokuLib::textureMgr.loadTexture(&dat.nameTexture, buffer, &size.x, &size.y))
+					printf("Failed to load %s\n", buffer);
+				dat.nameSprite.setTexture2(dat.nameTexture, 0, 0, size.x, size.y);
 			}
 		}
 	}
@@ -4640,14 +4789,14 @@ bool initStartingKeys(SokuLib::v2::Player * const assist)
 	}
 	assist->inputData.keyInput.changeCard = 0;
 	if (assist->renderInfos.yRotation == 90) {
-		if (!loadedData[chr.chr][chr.loadoutIndex].canFly) {
+		if (!loadedData[chr.chr].config[chr.loadoutIndex].canFly) {
 			assist->inputData.keyInput.horizontalAxis = 0;
 			assist->inputData.keyInput.verticalAxis = 0;
 			assist->inputData.keyInput.a = 0;
 			assist->inputData.keyInput.b = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.b ? assist->inputData.keyInput.b + 1 : 0;
 			assist->inputData.keyInput.c = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.c ? assist->inputData.keyInput.c + 1 : 0;
 			assist->inputData.keyInput.d = 0;
-			assist->inputData.keyInput.spellcard = 0;
+			assist->inputData.keyInput.spellcard = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.spellcard ? assist->inputData.keyInput.spellcard + 1 : 0;
 			return false;
 		}
 
@@ -4703,7 +4852,7 @@ bool initStartingKeys(SokuLib::v2::Player * const assist)
 			assist->inputData.keyInput.b = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.b ? assist->inputData.keyInput.b + 1 : 0;
 			assist->inputData.keyInput.c = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.c ? assist->inputData.keyInput.c + 1 : 0;
 			assist->inputData.keyInput.d = 0;
-			assist->inputData.keyInput.spellcard = 0;
+			assist->inputData.keyInput.spellcard = assist->keyManager->keymapManager->input.select && assist->inputData.keyInput.spellcard ? assist->inputData.keyInput.spellcard + 1 : 0;
 			return false;
 		case 1:
 			if (assist->inputData.keyInput.verticalAxis < 0)
@@ -4739,10 +4888,10 @@ bool initStartingKeys(SokuLib::v2::Player * const assist)
 
 		for (int i = 0; i < 8; i++) {
 			int &old = ((int *)&assist->inputData.keyInput)[i];
-			int actual = assist->keyManager->keymapManager->input.select;
 			int actual2 = ((int *)&assist->keyManager->keymapManager->input)[i];
+			int actual = chr.actualKeys ? actual2 : assist->keyManager->keymapManager->input.select;
 			int authorized = ((int *)&chr.allowedKeys)[i];
-			int start = ((int *)&chr.startKeys)[i];
+			int start = ((int *)&chr.startKeys)[i] && chr.startTimer >= chr.startMin;
 
 			if (i == 6)
 				continue;
@@ -4934,8 +5083,8 @@ void __declspec(naked) controllerUpdateOverride()
 	}
 }
 
-static_assert(sizeof(*chrSelectExtra) == 744);
-static_assert(offsetof(ExtraChrSelectData, cursorCounter) == 728);
+static_assert(sizeof(*chrSelectExtra) == 896);
+static_assert(offsetof(ExtraChrSelectData, cursorCounter) == 880);
 
 void __declspec(naked) firstChrSelected()
 {
@@ -4943,11 +5092,11 @@ void __declspec(naked) firstChrSelected()
 		LEA EAX, [chrSelectExtra]
 		TEST EBP, EBP
 		JZ zero
-		MOV [EAX + 728 + 744], 60
+		MOV [EAX + 880 + 896], 60
 		MOV byte ptr [ESI + EBP * 0x1 + 0x22C0], 0x4
 		RET
 	zero:
-		MOV [EAX + 728], 60
+		MOV [EAX + 880], 60
 		MOV byte ptr [ESI + EBP * 0x1 + 0x22C0], 0x4
 		RET
 	}
@@ -5339,8 +5488,7 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 			info.activePose = 0;
 			goto swap;
 		} else if (
-			keys &&
-			(
+			keys && (
 				keys->keymapManager->input.d && keys->keymapManager->input.d < 10 ||
 				keys->keymapManager->input.changeCard && keys->keymapManager->input.changeCard < 10
 			) &&
@@ -5420,9 +5568,17 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 	}
 	for (int i = 2; i < 4; i++) {
 		auto &info = (&currentChr.first)[i - 2];
-		auto &elems = loadedData[(&currentChr.first)[i - 2].chr][info.loadoutIndex];
+		auto &spells = loadedData[(&currentChr.first)[i - 2].chr].replaceSpells;
+		auto &elems = loadedData[(&currentChr.first)[i - 2].chr].config[info.loadoutIndex];
 		auto cost = elems.shownCost;
 
+		if (elems.spells.front() == 21) {
+			auto it = spells.find(players[i]->gameData.opponent->characterIndex);
+
+			if (it == spells.end())
+				it = spells.find(SokuLib::CHARACTER_RANDOM);
+			cost = it->second.cost;
+		}
 		if (players[i]->weatherId == SokuLib::WEATHER_CLOUDY)
 			cost--;
 		if (cost < 1)
@@ -5443,8 +5599,8 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 		if (!SokuLib::v2::GameDataManager::instance->players[2]->timeStop)
 			updateObject(players[1], SokuLib::v2::GameDataManager::instance->players[3], currentChr.second);
 	}
-	assisterAttacks(players[0], SokuLib::v2::GameDataManager::instance->players[2], currentChr.first,  loadedData[currentChr.first.chr][currentChr.first.loadoutIndex]);
-	assisterAttacks(players[1], SokuLib::v2::GameDataManager::instance->players[3], currentChr.second, loadedData[currentChr.second.chr][currentChr.second.loadoutIndex]);
+	assisterAttacks(players[0], SokuLib::v2::GameDataManager::instance->players[2], currentChr.first,  loadedData[currentChr.first.chr].config[currentChr.first.loadoutIndex],   loadedData[currentChr.first.chr].replaceSpells);
+	assisterAttacks(players[1], SokuLib::v2::GameDataManager::instance->players[3], currentChr.second, loadedData[currentChr.second.chr].config[currentChr.second.loadoutIndex], loadedData[currentChr.second.chr].replaceSpells);
 
 	if (players[2]->timeStop > 1)
 		players[0]->timeStop = max(players[0]->timeStop + 1, 2);
@@ -5779,7 +5935,6 @@ void *__fastcall addExtraChrsGameMatch(void *packet)
 	p[1] = loadouts[1];
 	p[2] = loadouts[2];
 	p[3] = loadouts[3];
-	//}
 	return reinterpret_cast<char *>(data) + 4;
 }
 
@@ -5854,9 +6009,11 @@ void onMeterGained(SokuLib::v2::Player *player, int meter)
 	gainMeter((&currentChr.first)[currentIndex(player)], meter * ASSIST_METER_CONVERSION);
 }
 
+unsigned __tmpSave;
 void __declspec(naked) onMeterGained_hook()
 {
 	__asm {
+		MOV [__tmpSave], ECX
 		MOV AL, [ECX + 0x14E]
 		CMP AL, 2
 		JL lower
@@ -5866,6 +6023,7 @@ void __declspec(naked) onMeterGained_hook()
 		PUSH ESI
 		CALL onMeterGained
 		ADD ESP, 8
+		MOV ECX, [__tmpSave]
 		FLD dword ptr [ESI + 0x54C]
 		RET
 	}
@@ -5874,6 +6032,7 @@ void __declspec(naked) onMeterGained_hook()
 void __declspec(naked) onMeterGainedHit_hook()
 {
 	__asm {
+		MOV [__tmpSave], ECX
 		MOV AL, [ECX + 0x14E]
 		CMP AL, 2
 		JL lower
@@ -5884,6 +6043,7 @@ void __declspec(naked) onMeterGainedHit_hook()
 		CALL onMeterGained
 		POP ECX
 		ADD ESP, 4
+		MOV ECX, [__tmpSave]
 		CMP byte ptr [ECX + 0x7CC],0x2
 		RET
 	}
@@ -6478,7 +6638,7 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	*(char *)0x468B05 = 0x90;
 	*(char *)0x468B06 = 0x90;
 
-	og_loadDat = SokuLib::TamperNearJmpOpr(0x7fb85f, loadExtraDatFiles);
+	og_sokuSetup = reinterpret_cast<bool (__thiscall *)(void *, void *)>(SokuLib::TamperNearJmpOpr(0x7FB871, loadExtraDatFiles));
 
 	og_handleInputs = SokuLib::TamperNearJmpOpr(0x48224D, handlePlayerInputs);
 	s_origLoadDeckData = SokuLib::TamperNearJmpOpr(0x437D23, loadDeckData);

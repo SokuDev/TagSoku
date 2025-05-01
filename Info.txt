@@ -1,0 +1,22 @@
+Troubleshooting info:
+- Will crash if used with Soku2 older than version 2.30g
+- Will crash if used with InfiniteDecks
+- Will crash if giuroll is loaded after this mod
+- Will crash or make the HUD act weird if used with CharacterInForeground (even if CiF+ is set to OFF)
+- HUD mods in general may either not work or mess up the custom HUD
+- Requires the latest version of SokuModLoader (at least version 0.4.1): if not, you may see error 45a, or some instabilities
+- Requires the latest version of giuroll (at least version 0.6.18): if not, it will cause desyncs when using the mod's mechanics
+
+Known issues:
+- Sometimes when using cards, the card text ends up being a solid white box.
+- Replays don't work properly (in particular, loadouts and tag characters aren't saved in the replays)
+
+Common problems:
+"Failed to load TagSoku.dll: Loading failed: 45a" or
+"Failed to load TagSoku.dll: Loading failed: A dynamic link library (DLL) initialization routine failed."
+"Failed to load TagSoku.dll: Loading failed: <Insert other cryptic error>."
+ - Try using using the latest SokuModLoader, or updating yours.
+"Game crashed! ... exception C0000005 at address ########" (8 digits and letters) during startup, or when loading in game
+ - Make sure the assets.dat folder is next to the DLL, and that you have no data folder next to the game's EXE.
+"Game crashed! ... exception C0000005 at address #######" (6 or 7 digits and letters) during startup
+ - Make sure that InfiniteDecks is disabled.

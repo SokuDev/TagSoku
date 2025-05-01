@@ -1,21 +1,20 @@
 {
     "spells": [201],
-    "shownCost": 5,
+    "shownCost": 3,
 
     "8a": {
         "ground": {
-            "cd": 225,
+            "cd": 300,
             "nb": 1,
-            "action": 510,
-            "offsetX": -150,
+            "action": 540,
+            "offsetX": 50,
             "cond": "end"
         },
         "air": {
-            "cd": 225,
+            "cd": 300,
             "nb": 1,
-            "action": 510,
-            "posY": 0,
-            "offsetX": -150,
+            "action": 542,
+            "offsetX": 50,
             "cond": "end"
         }
     },
@@ -23,36 +22,31 @@
         "ground": {
             "cd": 300,
             "nb": 1,
-            "action": 550,
+            "action": 520,
             "offsetX": -50,
             "cond": "end"
         },
         "air": {
             "cd": 300,
             "nb": 1,
-            "action": 552,
-            "gravityY": 0,
-            "speedY": 0,
+            "action": 520,
+            "posY": 0,
             "offsetX": -50,
             "cond": "end"
         }
     },
     "8c": {
         "ground": {
-            "cd": 150,
+            "cd": 300,
             "nb": 1,
-            "action": 570,
-            "end": 571,
-            "offsetX": -200,
+            "action": 500,
             "cond": "end"
         },
         "air": {
-            "cd": 150,
+            "cd": 300,
             "nb": 1,
-            "action": 570,
-            "end": 571,
+            "action": 500,
             "posY": 0,
-            "offsetX": -200,
             "cond": "end"
         }
     },
@@ -61,8 +55,8 @@
         "ground": {
             "speedX": 0,
             "speedY": 0,
-            "offsetX": 0,
-            "cost": 5,
+            "cost": 3,
+            "allowedKeys": [0, 0, 0, 0, 0, 0, 0, 1],
             "cardName": 201,
             "cd": 300,
             "nb": 1,
@@ -71,11 +65,10 @@
         "air": {
             "speedX": 0,
             "speedY": 0,
-            "posY": 0,
-            "gravityY": 0,
-            "offsetX": 0,
-            "cost": 5,
+            "cost": 3,
+            "allowedKeys": [0, 0, 0, 0, 0, 0, 0, 1],
             "cardName": 201,
+            "posY": 0,
             "cd": 300,
             "nb": 1,
             "action": 601

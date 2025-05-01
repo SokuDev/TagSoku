@@ -1,0 +1,131 @@
+{
+    "spells": [210],
+    "shownCost": 2,
+    "stanceIdle": 2196,
+
+    "8a0": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 505
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 505,
+            "posY": 0
+        }
+    },
+    "8a1": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 501
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 501,
+            "posY": 0
+        }
+    },
+    "8b0": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 512
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 514
+        }
+    },
+    "8b1": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 508
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 510
+        }
+    },
+    "8c0": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 560
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 561,
+            "posY": 0
+        }
+    },
+    "8c1": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 556
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 556,
+            "posY": 0
+        }
+    },
+
+    "5s0": {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 2,
+            "cardName": 210,
+            "cd": 300,
+            "nb": 1,
+            "action": 630
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 2,
+            "cardName": 210,
+            "cd": 300,
+            "nb": 1,
+            "action": 630
+        }
+    },
+    "5s1": {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 2,
+            "cardName": 210,
+            "cd": 300,
+            "nb": 1,
+            "action": 610
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 2,
+            "cardName": 210,
+            "cd": 300,
+            "nb": 1,
+            "action": 610
+        }
+    }
+}

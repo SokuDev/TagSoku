@@ -1,0 +1,67 @@
+{
+    "spells": [21, 226, 202, 208, 205, 203, 225, 210, 220, 207, 219, 223, 227, 221, 228, 229, 209, 222, 211, 212],
+    "shownCost": 0,
+
+    "8a": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 530,
+            "offsetX": -50
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 530,
+            "offsetX": -50,
+            "posY": 0
+        }
+    },
+    "8b": {
+        "ground": {
+            "cd": 210,
+            "nb": 1,
+            "action": 561,
+            "offsetX": -50
+        },
+        "air": {
+            "cd": 210,
+            "nb": 1,
+            "action": 561,
+            "offsetX": -50,
+            "posY": 0
+        }
+    },
+    "8c": {
+        "ground": {
+            "cd": 300,
+            "nb": 1,
+            "action": 505,
+            "offsetX": -50
+        },
+        "air": {
+            "cd": 300,
+            "nb": 1,
+            "action": 505,
+            "offsetX": -50,
+            "posY": 0
+        }
+    },
+
+    "5s": {
+        "ground": {
+            "cost": 0,
+            "cardName": 21,
+            "cd": 300,
+            "nb": 0,
+            "action": 421
+        },
+        "air": {
+            "cost": 0,
+            "cardName": 21,
+            "cd": 300,
+            "nb": 0,
+            "action": 421
+        }
+    }
+}

@@ -1,0 +1,496 @@
+{
+	"0":  {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 2,
+            "cardName": 226,
+            "cd": 300,
+            "nb": 1,
+            "action": 626
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 2,
+            "cardName": 226,
+            "cd": 300,
+            "nb": 1,
+            "action": 626
+        },
+		"cost": 2,
+		"card": 226
+    },
+	"1":  {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 3,
+            "cardName": 202,
+            "cd": 300,
+            "nb": 1,
+            "action": 602
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 3,
+            "cardName": 202,
+            "cd": 300,
+            "nb": 1,
+            "action": 602
+        },
+		"cost": 3,
+		"card": 202
+    },
+	"4":  {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 5,
+            "cardName": 208,
+            "cd": 300,
+            "nb": 1,
+            "action": 608
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 5,
+            "cardName": 208,
+            "cd": 300,
+            "nb": 1,
+            "action": 608
+        },
+		"cost": 5,
+		"card": 208
+    },
+	"6":  {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 4,
+            "cardName": 205,
+            "cd": 300,
+            "nb": 1,
+            "action": 605
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 4,
+            "cardName": 205,
+            "cd": 300,
+            "nb": 1,
+            "action": 605
+        },
+		"cost": 4,
+		"card": 205
+    },
+	"7":  {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 4,
+            "cardName": 203,
+            "cd": 300,
+            "nb": 1,
+            "action": 603
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 4,
+            "cardName": 203,
+            "cd": 300,
+            "nb": 1,
+            "action": 603
+        },
+		"cost": 4,
+		"card": 203
+    },
+	"8":  {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 3,
+            "cardName": 225,
+            "cd": 300,
+            "nb": 1,
+            "action": 625
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 3,
+            "cardName": 225,
+            "cd": 300,
+            "nb": 1,
+            "action": 625
+        },
+		"cost": 3,
+		"card": 225
+    },
+	"9":  {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 4,
+            "cardName": 210,
+            "cd": 300,
+            "nb": 1,
+            "action": 610
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 4,
+            "cardName": 210,
+            "cd": 300,
+            "nb": 1,
+            "action": 610
+        },
+		"cost": 4,
+		"card": 210
+    },
+	"10": {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 5,
+            "cardName": 220,
+            "cd": 300,
+            "nb": 1,
+            "action": 620
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 5,
+            "cardName": 220,
+            "cd": 300,
+            "nb": 1,
+            "action": 620
+        },
+		"cost": 5,
+		"card": 220
+    },
+	"13": {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 5,
+            "cardName": 207,
+            "cd": 300,
+            "nb": 1,
+            "action": 607
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 5,
+            "cardName": 207,
+            "cd": 300,
+            "nb": 1,
+            "action": 607
+        },
+		"cost": 5,
+		"card": 207
+    },
+	"15": {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 5,
+            "cardName": 219,
+            "cd": 300,
+            "nb": 1,
+            "action": 619
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 5,
+            "cardName": 219,
+            "cd": 300,
+            "nb": 1,
+            "action": 619
+        },
+		"cost": 5,
+		"card": 219
+    },
+	"18": {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 2,
+            "cardName": 223,
+            "cd": 300,
+            "nb": 1,
+            "action": 623
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 2,
+            "cardName": 223,
+            "cd": 300,
+            "nb": 1,
+            "action": 623
+        },
+		"cost": 2,
+		"card": 223
+    },
+	"22": {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 2,
+            "cardName": 227,
+            "cd": 300,
+            "nb": 1,
+            "action": 627
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 2,
+            "cardName": 227,
+            "cd": 300,
+            "nb": 1,
+            "action": 627
+        },
+		"cost": 2,
+		"card": 227
+    },
+	"23": {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 5,
+            "cardName": 221,
+            "cd": 300,
+            "nb": 1,
+            "action": 621
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 5,
+            "cardName": 221,
+            "cd": 300,
+            "nb": 1,
+            "action": 621
+        },
+		"cost": 5,
+		"card": 221
+    },
+	"24": {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 4,
+            "cardName": 228,
+            "cd": 300,
+            "nb": 1,
+            "action": 628
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 4,
+            "cardName": 228,
+            "cd": 300,
+            "nb": 1,
+            "action": 628
+        },
+		"cost": 4,
+		"card": 228
+    },
+	"26": {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 2,
+            "cardName": 229,
+            "cd": 300,
+            "nb": 1,
+            "action": 629
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 2,
+            "cardName": 229,
+            "cd": 300,
+            "nb": 1,
+            "action": 629
+        },
+		"cost": 2,
+		"card": 229
+    },
+	"27": {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 5,
+            "cardName": 209,
+            "cd": 300,
+            "nb": 1,
+            "action": 609
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 5,
+            "cardName": 209,
+            "cd": 300,
+            "nb": 1,
+            "action": 609
+        },
+		"cost": 5,
+		"card": 209
+    },
+	"29": {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 3,
+            "cardName": 222,
+            "cd": 300,
+            "nb": 1,
+            "action": 622
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 3,
+            "cardName": 222,
+            "cd": 300,
+            "nb": 1,
+            "action": 622
+        },
+		"cost": 3,
+		"card": 222
+    },
+	"31": {
+        "ground": {
+            "speedX": 0,
+            "speedY": 0,
+            "offsetX": -50,
+            "cost": 3,
+            "cardName": 211,
+            "cd": 300,
+            "nb": 1,
+            "action": 611
+        },
+        "air": {
+            "speedX": 0,
+            "speedY": 0,
+            "posY": 0,
+            "gravityY": 0,
+            "offsetX": -50,
+            "cost": 3,
+            "cardName": 211,
+            "cd": 300,
+            "nb": 1,
+            "action": 611
+        },
+		"cost": 3,
+		"card": 211
+    },
+	"default": {
+		"ground": {
+			"speedX": 0,
+			"speedY": 0,
+			"offsetX": -50,
+			"cost": 4,
+			"cardName": 212,
+			"cd": 300,
+			"nb": 1,
+			"action": 612
+		},
+		"air": {
+			"speedX": 0,
+			"speedY": 0,
+			"posY": 0,
+			"gravityY": 0,
+			"offsetX": -50,
+			"cost": 4,
+			"cardName": 212,
+			"cd": 300,
+			"nb": 1,
+			"action": 612
+		},
+		"cost": 4,
+		"card": 212
+	}
+}
