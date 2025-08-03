@@ -37,5 +37,5 @@ target_link_libraries(
         shlwapi
         d3d9
         d3dx9
-        $<$<CONFIG:Debug>:zlib>
+        #FIXME: $<$<CONFIG:Debug>:zlib>
 )

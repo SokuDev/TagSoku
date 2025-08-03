@@ -12,7 +12,6 @@
 #include <SokuLib.hpp>
 #include <shlwapi.h>
 #include <thread>
-#include <zlib.h>
 #include <iostream>
 
 
@@ -20,6 +19,35 @@
 #define puts(...)
 #define printf(...)
 #endif
+
+#define HP_METHOD 0
+
+#if HP_METHOD == 0
+#define PLAYER_MAX_HEALTH 10000
+#define PLAYER_ALONE_MAX_HEALTH 10000
+#define PLAYER_ALONE_HEAL 0
+#elif HP_METHOD == 1
+#define PLAYER_MAX_HEALTH 5000
+#define PLAYER_ALONE_MAX_HEALTH 5000
+#define PLAYER_ALONE_HEAL 0
+#elif HP_METHOD == 2
+#define PLAYER_MAX_HEALTH 7500
+#define PLAYER_ALONE_MAX_HEALTH 7500
+#define PLAYER_ALONE_HEAL 0
+#elif HP_METHOD == 3
+#define PLAYER_MAX_HEALTH 5000
+#define PLAYER_ALONE_MAX_HEALTH 5000
+#define PLAYER_ALONE_HEAL 2500
+#elif HP_METHOD == 4
+#define PLAYER_MAX_HEALTH 5000
+#define PLAYER_ALONE_MAX_HEALTH 20000
+#define PLAYER_ALONE_HEAL 0
+#elif HP_METHOD == 5
+#define PLAYER_MAX_HEALTH 5000
+#define PLAYER_ALONE_MAX_HEALTH 15000
+#define PLAYER_ALONE_HEAL 2500
+#endif
+
 
 #define TAG_CALL_METER 150
 #define ASSIST_CALL_METER 75
@@ -123,7 +151,9 @@ struct PacketGameMatchEvent {
 
 static std::mutex mutex;
 
-#ifdef _DEBUG
+#ifdef _DEBUG_
+// FIXME: _DEBUG -> _DEBUG_ because I don't have zlib.h anymore somehow?
+#include <zlib.h>
 std::ofstream logStream;
 
 class ZUtils {
@@ -410,6 +440,7 @@ struct ChrInfo {
 	bool ended = false;
 	bool callInit = true;
 	bool actualKeys = false;
+	bool wasDead = false;
 	unsigned char burstCharges = 0;
 	unsigned char activePose = 0;
 	unsigned short meterReq = 0;
@@ -458,6 +489,7 @@ struct ChrInfo {
 		this->tagging = other.tagging;
 		this->deathTag = other.deathTag;
 		this->slowTag = other.slowTag;
+		this->wasDead = other.wasDead;
 		this->ending = other.ending;
 		this->ended = other.ended;
 		this->callInit = other.callInit;
@@ -665,7 +697,8 @@ static bool (__thiscall *og_sokuSetup)(void *, void *);
 static std::map<unsigned, Loadouts> loadedLoadouts;
 static std::mt19937 random;
 
-#ifdef _DEBUG
+#ifdef _DEBUG_
+// FIXME
 void displayPacket(SokuLib::Packet *packet, const std::string &start)
 {
 	mutex.lock();
@@ -2381,12 +2414,22 @@ void __declspec(naked) saveOldHud()
 	}
 }
 
+
+
 void setBulletOwners()
 {
-	for (auto &obj : SokuLib::v2::GameDataManager::instance->players[2]->objectList->getList())
+	for (auto &obj : SokuLib::v2::GameDataManager::instance->players[0]->objectList->getList())
+		currentIndex(obj) = 0;
+	for (auto &obj : SokuLib::v2::GameDataManager::instance->players[1]->objectList->getList())
+		currentIndex(obj) = 1;
+	for (auto &obj : SokuLib::v2::GameDataManager::instance->players[2]->objectList->getList()) {
+		currentIndex(obj) = 2;
 		obj->gameData.owner = obj->gameData.ally = SokuLib::v2::GameDataManager::instance->players[0];
-	for (auto &obj : SokuLib::v2::GameDataManager::instance->players[3]->objectList->getList())
+	}
+	for (auto &obj : SokuLib::v2::GameDataManager::instance->players[3]->objectList->getList()) {
+		currentIndex(obj) = 3;
 		obj->gameData.owner = obj->gameData.ally = SokuLib::v2::GameDataManager::instance->players[1];
+	}
 }
 
 void __declspec(naked) restoreOldHud()
@@ -5407,16 +5450,26 @@ void checkShock(SokuLib::v2::Player &chr, SokuLib::v2::Player &op, ChrInfo &info
 	}
 }
 
+SokuLib::v2::Player *getObjectOwner(SokuLib::v2::GameObjectBase *obj)
+{
+	return SokuLib::v2::GameDataManager::instance->players[currentIndex(obj)];
+}
+
 void battleProcessCommon(SokuLib::BattleManager *This)
 {
 	auto players = (SokuLib::v2::Player**)((int)This + 0x0C);
 
 	if (This->matchState == -1)
 		return;
-	if (SokuLib::checkKeyOneshot(DIK_F8, false, false, false))
-		kill = !kill;
-	if (SokuLib::checkKeyOneshot(DIK_F4, false, false, false))
-		disp = !disp;
+	if (SokuLib::mainMode == SokuLib::BATTLE_MODE_PRACTICE) {
+		if (SokuLib::checkKeyOneshot(DIK_F8, false, false, false))
+			kill = !kill;
+		if (SokuLib::checkKeyOneshot(DIK_F4, false, false, false))
+			disp = !disp;
+	} else {
+		kill = false;
+		disp = false;
+	}
 #ifdef _DEBUG
 	if (SokuLib::checkKeyOneshot(DIK_F3, false, false, false))
 		disp2 = !disp2;
@@ -5459,17 +5512,30 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 	for (int i = 0; i < 2; i++) {
 		auto &info = (&currentChr.first)[i];
 		auto keys = SokuLib::v2::GameDataManager::instance->players[i]->keyManager;
+		auto mate = SokuLib::v2::GameDataManager::instance->players[i + 2];
+		auto primary = SokuLib::v2::GameDataManager::instance->players[i];
 
 		if (info.tagAntiBuffer)
 			info.tagAntiBuffer--;
-		if (SokuLib::v2::GameDataManager::instance->players[i + 2]->hp == 0) {
-			auto mate = SokuLib::v2::GameDataManager::instance->players[i + 2];
-
+		if (mate->hp == 0) {
 			if (info.maxCd == 0)
 				info.maxCd = 10;
 			info.cd = info.maxCd;
 			mate->untech = 60;
 			mate->renderInfos.yRotation = 0;
+			if (This->matchState == 2) {
+				primary->maxHP = PLAYER_ALONE_MAX_HEALTH;
+				if (!info.wasDead) {
+					primary->hp += PLAYER_ALONE_HEAL;
+					SokuLib::playSEWaveBuffer(SokuLib::SFX_KNOCK_OUT);
+				}
+				if (primary->hp > PLAYER_MAX_HEALTH)
+					primary->hp = PLAYER_MAX_HEALTH;
+			} else {
+				primary->maxHP = PLAYER_MAX_HEALTH;
+				mate->maxHP = PLAYER_MAX_HEALTH;
+			}
+			info.wasDead = true;
 			if (
 				mate->frameState.actionId < SokuLib::ACTION_STAND_GROUND_HIT_SMALL_HITSTUN ||
 				mate->frameState.actionId >= SokuLib::ACTION_RIGHTBLOCK_HIGH_SMALL_BLOCKSTUN
@@ -5480,12 +5546,16 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 			}
 			checkShock(
 				*SokuLib::v2::GameDataManager::instance->players[i],
-				*SokuLib::v2::GameDataManager::instance->players[!i],
+				*SokuLib::v2::GameDataManager::instance->players[i ^ 1],
 				info
 			);
 		} else if (SokuLib::v2::GameDataManager::instance->players[i]->hp == 0 && This->matchState <= 2) {
 			info.deathTag = true;
 			info.activePose = 0;
+			info.wasDead = true;
+			mate->maxHP = PLAYER_ALONE_MAX_HEALTH;
+			mate->hp += PLAYER_ALONE_HEAL;
+			SokuLib::playSEWaveBuffer(SokuLib::SFX_KNOCK_OUT);
 			goto swap;
 		} else if (
 			keys && (
@@ -5545,6 +5615,10 @@ void battleProcessCommon(SokuLib::BattleManager *This)
 				((short **)(o->gauge.value))[1] = &SokuLib::v2::GameDataManager::instance->players[i]->timeWithBrokenOrb;
 			for (auto o : hud1->playerHUD[i].cardGauge)
 				((short **)(o->gauge.value))[1] = &SokuLib::v2::GameDataManager::instance->players[i]->handInfo.cardGauge;
+		} else {
+			info.wasDead = false;
+			primary->maxHP = PLAYER_MAX_HEALTH;
+			mate->maxHP = PLAYER_MAX_HEALTH;
 		}
 	}
 	for (int i = 0; i < 4; i++)
@@ -6206,6 +6280,22 @@ void __declspec(naked) disableFKeysSpec()
 	}
 }
 
+void __declspec(naked) getObjectOwner_hook()
+{
+	__asm {
+		PUSH EDX
+		PUSH EAX
+		PUSH ECX
+		CALL getObjectOwner
+		POP ECX
+		MOV EDX, EAX
+		POP EAX
+		MOVSX EAX, byte ptr [EAX + EDX + 0x6A4]
+		POP EDX
+		RET
+	}
+}
+
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
 	DWORD old;
 
@@ -6220,7 +6310,8 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	random.seed(time(nullptr));
 	if (!initGR())
 		return false;
-#ifdef _DEBUG
+#ifdef _DEBUG_
+	// FIXME
 	time_t t = time(nullptr);
 	struct tm *m = localtime(&t);
 	char buffer[128];
@@ -6579,6 +6670,9 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	*(char *)0x463F5B = 0x6C;
 	// fmul dword ptr [esi+000004B0] -> fmul dword ptr [eax+000004B0]
 	*(char *)0x463F83 = 0x88;
+	// Use the skill level from the actual bullet owner
+	memset((void *)0x463FF5, 0x90, 8);
+	SokuLib::TamperNearCall(0x463FF5, getObjectOwner_hook);
 
 	SokuLib::TamperNearCall(0x46404C, takeOpponentCorrection);
 	*(char *)0x464051 = 0x90;
@@ -6643,6 +6737,21 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	og_handleInputs = SokuLib::TamperNearJmpOpr(0x48224D, handlePlayerInputs);
 	s_origLoadDeckData = SokuLib::TamperNearJmpOpr(0x437D23, loadDeckData);
 	og_getSaveDataMgr = SokuLib::TamperNearJmpOpr(0x4818FA, onLoadingDone);
+
+#if PLAYER_MAX_HEALTH != 10000
+	*(unsigned *)0x46BCA5 = PLAYER_MAX_HEALTH;
+	// Calm uses hardcoded 10k HP
+	const unsigned char calmPatch[] = {
+		0x8D, 0x41, 0x05,                         // LEA EAX, [ECX + 05]
+		0x66, 0x8B, 0x8E, 0x86, 0x01, 0x00, 0x00, // MOV CX, [ESI + 00000186]
+		0x66, 0x39, 0xC8,                         // CMP AX, CX
+		0x7E, 0x03,                               // JLE th123.exe+88F98
+		0x66, 0x89, 0xC8,                         // MOV AX, CX
+		0x66, 0x89, 0x86, 0x84, 0x01, 0x00, 0x00, // MOV [ESI + 00000184], AX
+		0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 // 8 NOP
+	};
+	memcpy((void *)0x488F86, calmPatch, sizeof(calmPatch));
+#endif
 	::VirtualProtect((PVOID)TEXT_SECTION_OFFSET, TEXT_SECTION_SIZE, old, &old);
 
 	::FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
