@@ -26,9 +26,11 @@ add_library(
         MODULE
         src/main.cpp
         src/version.rc
+        src/timer.cpp
+        src/timer.hpp
 )
 target_compile_options("${PROJECT_NAME}" PRIVATE /Zi)
-target_compile_definitions("${PROJECT_NAME}" PRIVATE DIRECTINPUT_VERSION=0x0800 CURL_STATICLIB _CRT_SECURE_NO_WARNINGS $<$<CONFIG:Debug>:_DEBUG>)
+target_compile_definitions("${PROJECT_NAME}" PRIVATE DIRECTINPUT_VERSION=0x0800 CURL_STATICLIB _CRT_SECURE_NO_WARNINGS _USE_MATH_DEFINES $<$<CONFIG:Debug>:_DEBUG>)
 target_include_directories("${PROJECT_NAME}" PRIVATE include SokuLib/directx "src/${PROJECT_NAME}/")
 target_link_directories("${PROJECT_NAME}" PRIVATE lib)
 target_link_libraries(

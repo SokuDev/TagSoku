@@ -2,7 +2,6 @@
 // Created by PinkySmile on 31/10/2020
 //
 
-#define _USE_MATH_DEFINES 1
 #include <random>
 #include <fstream>
 #include <sstream>
@@ -13,6 +12,7 @@
 #include <shlwapi.h>
 #include <thread>
 #include <iostream>
+#include "timer.hpp"
 
 
 #ifndef _DEBUG
@@ -20,7 +20,7 @@
 #define printf(...)
 #endif
 
-#define HP_METHOD 0
+#define HP_METHOD 7
 
 #if HP_METHOD == 0
 #define PLAYER_MAX_HEALTH 10000
@@ -46,9 +46,19 @@
 #define PLAYER_MAX_HEALTH 5000
 #define PLAYER_ALONE_MAX_HEALTH 15000
 #define PLAYER_ALONE_HEAL 2500
+#elif HP_METHOD == 6
+#define PLAYER_MAX_HEALTH 10000
+#define PLAYER_ALONE_MAX_HEALTH 30000
+#define PLAYER_ALONE_HEAL 0
+#elif HP_METHOD == 7
+#define PLAYER_MAX_HEALTH 8000
+#define PLAYER_ALONE_MAX_HEALTH 8000
+#define PLAYER_ALONE_HEAL 0
 #endif
 
 
+#define ASSIST_DEFENSE_MODIFIER 0.5
+#define ASSIST_HIT_PENALTY 300
 #define TAG_CALL_METER 150
 #define ASSIST_CALL_METER 75
 #define ASSIST_CARD_METER 750
@@ -347,6 +357,7 @@ static unsigned char versionMask[16] = {
 };
 static unsigned char (__fastcall *og_advanceFrame)(SokuLib::v2::Player *);
 static void (*s_originalDrawGradiantBar)(float param1, float param2, float param3);
+static void (__fastcall *ogBattleMgrUpdateCounters)(void *);
 static int (SokuLib::SelectServer::*s_originalSelectServerOnProcess)();
 static int (SokuLib::SelectServer::*s_originalSelectServerOnRender)();
 static int (SokuLib::SelectClient::*s_originalSelectClientOnProcess)();
@@ -364,8 +375,9 @@ static void (__fastcall *ogBattleMgrHandleCollision)(SokuLib::BattleManager*, in
 static void (__stdcall *s_origLoadDeckData)(char *, void *, SokuLib::DeckInfo &, int, SokuLib::Deque<short> &);
 static void (*og_FUN4098D6)(int, int, int, int);
 
-#define currentIndex(p) (*(char *)((int)p + 0x14E))
-#define originalIndex(p) (*(char *)((int)p + 0x14F))
+#define currentIndex(p)  (*(unsigned char *)((int)p + 0x14E))
+#define originalIndex(p) (*(unsigned char *)((int)p + 0x14F))
+#define soloTimer unknown352[0]
 
 struct CEffectManager {
 	void **vtable;
@@ -2330,6 +2342,7 @@ void __fastcall CBattleManager_OnRender(SokuLib::BattleManager *This)
 			drawPlayerBoxes(*SokuLib::v2::GameDataManager::instance->players[3], SokuLib::v2::GameDataManager::instance->players[3]->renderInfos.yRotation != 90);
 		}
 	}
+	//renderTimer(This);
 }
 
 const char *battleUpperPath1 = "data/battle/battleUpper1.dat";
@@ -5167,6 +5180,7 @@ struct GiurollCallbacks {
 
 class SavedFrame {
 private:
+	TimerState _timerState;
 	std::pair<ChrInfo, ChrInfo> _currentChr;
 	SokuLib::v2::Player *_players1[4];
 	SokuLib::v2::Player *_players2[4];
@@ -5185,6 +5199,7 @@ public:
 	{
 		auto players = (SokuLib::v2::Player**)((int)&SokuLib::getBattleMgr() + 0xC);
 
+		this->_timerState = timerState;
 		this->_currentChr.first.meter = currentChr.first.meter;
 		this->_currentChr.second.meterReq = currentChr.second.meterReq;
 		this->_currentChr.second.burstCharges = currentChr.second.burstCharges;
@@ -5254,6 +5269,7 @@ public:
 		currentChr.second.meter = this->_currentChr.second.meter;
 		currentChr.second.meterReq = this->_currentChr.second.meterReq;
 		currentChr.second.burstCharges = this->_currentChr.second.burstCharges;
+		timerState = this->_timerState;
 	}
 };
 
@@ -5835,6 +5851,10 @@ void *onLoadingDone()
 	SokuLib::v2::GameDataManager::instance->players[2]->gameData.ally = SokuLib::v2::GameDataManager::instance->players[0];
 	SokuLib::v2::GameDataManager::instance->players[2]->renderInfos.yRotation = 90;
 	SokuLib::v2::GameDataManager::instance->players[3]->renderInfos.yRotation = 90;
+	SokuLib::v2::GameDataManager::instance->players[0]->soloTimer = 0;
+	SokuLib::v2::GameDataManager::instance->players[1]->soloTimer = 0;
+	SokuLib::v2::GameDataManager::instance->players[2]->soloTimer = 0;
+	SokuLib::v2::GameDataManager::instance->players[3]->soloTimer = 0;
 	for (int i = 0; i < 4; i++) {
 		originalIndex(SokuLib::v2::GameDataManager::instance->players[i]) = i;
 		currentIndex(SokuLib::v2::GameDataManager::instance->players[i]) = i;
@@ -6296,6 +6316,50 @@ void __declspec(naked) getObjectOwner_hook()
 	}
 }
 
+void checkAndApplyAloneBuffs(SokuLib::v2::Player *player)
+{
+	auto index = currentIndex(player);
+
+	if (index >= 2)
+		return;
+	if (SokuLib::v2::GameDataManager::instance->players[index + 2]->hp != 0) {
+		if (player->soloTimer != 0) {
+			player->soloTimer = 0;
+			player->renderInfos.color.b = 0xFF;
+			player->renderInfos.color.g = 0xFF;
+		}
+		return;
+	}
+	player->soloTimer++;
+	player->soloTimer &= 0x3F;
+	player->renderInfos.color.r = 0xFF;
+	if (player->soloTimer < 0x20) {
+		player->renderInfos.color.g = (0x20 - player->soloTimer) * 6 + 63;
+		player->renderInfos.color.b = (0x20 - player->soloTimer) * 6 + 63;
+	} else {
+		player->renderInfos.color.g = (player->soloTimer - 0x20) * 6 + 63;
+		player->renderInfos.color.b = (player->soloTimer - 0x20) * 6 + 63;
+	}
+	player->attackPower *= 1.2;
+}
+
+void __declspec(naked) aloneBuffs()
+{
+	__asm {
+		PUSH ESI
+		CALL checkAndApplyAloneBuffs
+		POP ESI
+		MOVZX ECX, word ptr [ESI + 0x852]
+		RET
+	}
+}
+
+void __fastcall updateTimer_hook(void *This)
+{
+	ogBattleMgrUpdateCounters(This);
+	//updateTimer();
+}
+
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
 	DWORD old;
 
@@ -6426,6 +6490,10 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 
 	new SokuLib::Trampoline(0x435377, onProfileChanged, 7);
 	new SokuLib::Trampoline(0x450121, onDeckSaved, 6);
+
+	SokuLib::TamperNearCall(0x4892D7, aloneBuffs);
+	*(char *)0x4892DC = 0x90;
+	*(char *)0x4892DD = 0x90;
 
 	ogBattleMgrHandleCollision = SokuLib::TamperNearJmpOpr(0x47d618, CBattleManager_HandleCollision);
 	SokuLib::TamperNearJmpOpr(0x47d64c, CBattleManager_HandleCollision);
@@ -6752,6 +6820,14 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	};
 	memcpy((void *)0x488F86, calmPatch, sizeof(calmPatch));
 #endif
+
+	// Sprinkle MAX fix
+	memset((void *)0x468B68, 0x90, 6);
+	// MOV DL, 0x04
+	*(char *)0x468B68 = 0xB2;
+	*(char *)0x468B69 = 0x04;
+
+	ogBattleMgrUpdateCounters = reinterpret_cast<void (__fastcall *)(void *)>(SokuLib::TamperNearJmpOpr(0x4796B6, updateTimer_hook));
 	::VirtualProtect((PVOID)TEXT_SECTION_OFFSET, TEXT_SECTION_SIZE, old, &old);
 
 	::FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
