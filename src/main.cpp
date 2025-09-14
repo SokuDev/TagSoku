@@ -6360,6 +6360,34 @@ void __fastcall updateTimer_hook(void *This)
 	//updateTimer();
 }
 
+void __declspec(naked) fixSprinkleMax()
+{
+	__asm {
+		PUSH ESI
+		MOV  ESI, 0x20
+
+	loop_:
+		MOV  DL, [ECX + 0x14E]
+		CMP  DL, 2
+		JAE  max
+
+		CMP  byte ptr [EAX + 0x20], 0
+		SETL DL
+		SUB  DL, 1
+		JMP copy
+	max:
+		MOV  DL, 4
+	copy:
+		AND  EDX, 4
+		ADD  EAX, 1
+		SUB  ESI, 1
+		MOV  byte ptr [EAX + -1], DL
+		JNZ  loop_
+		POP  ESI
+		RET
+	}
+}
+
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
 	DWORD old;
 
@@ -6822,10 +6850,8 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 #endif
 
 	// Sprinkle MAX fix
-	memset((void *)0x468B68, 0x90, 6);
-	// MOV DL, 0x04
-	*(char *)0x468B68 = 0xB2;
-	*(char *)0x468B69 = 0x04;
+	memset((void *)0x468B5F, 0x90, 29);
+	SokuLib::TamperNearCall(0x468B5F, fixSprinkleMax);
 
 	ogBattleMgrUpdateCounters = reinterpret_cast<void (__fastcall *)(void *)>(SokuLib::TamperNearJmpOpr(0x4796B6, updateTimer_hook));
 	::VirtualProtect((PVOID)TEXT_SECTION_OFFSET, TEXT_SECTION_SIZE, old, &old);
