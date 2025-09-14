@@ -353,7 +353,7 @@ struct RivControl {
 
 static unsigned char versionMask[16] = {
 	0xB1, 0x62, 0x56, 0xD4, 0xDF, 0x68, 0x28, 0xA0,
-	0x1A, 0xEE, 0x14, 0x55, 0xCF, 0x7E, 0xC3, 0x57
+	0x1A, 0xEE, 0x14, 0x55, 0xD0, 0x7E, 0xC3, 0x57
 };
 static unsigned char (__fastcall *og_advanceFrame)(SokuLib::v2::Player *);
 static void (*s_originalDrawGradiantBar)(float param1, float param2, float param3);
@@ -6346,9 +6346,11 @@ void checkAndApplyAloneBuffs(SokuLib::v2::Player *player)
 void __declspec(naked) aloneBuffs()
 {
 	__asm {
+		PUSH EAX
 		PUSH ESI
 		CALL checkAndApplyAloneBuffs
 		POP ESI
+		POP EAX
 		MOVZX ECX, word ptr [ESI + 0x852]
 		RET
 	}
@@ -6519,6 +6521,7 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	new SokuLib::Trampoline(0x435377, onProfileChanged, 7);
 	new SokuLib::Trampoline(0x450121, onDeckSaved, 6);
 
+	// Buffs given when your partner is dead
 	SokuLib::TamperNearCall(0x4892D7, aloneBuffs);
 	*(char *)0x4892DC = 0x90;
 	*(char *)0x4892DD = 0x90;
