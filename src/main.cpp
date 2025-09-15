@@ -70,7 +70,8 @@
 #define CROSS_TAG_CD 900
 #define GROUND_TAG_CD 600
 #define SLOW_TAG_CD 900
-#define SLOW_TAG_COST 2
+#define SLOW_TAG_COST 3
+#define BORDER_BREAK_COST 3
 #define FONT_HEIGHT 16
 #define TEXTURE_SIZE 0x200
 #define BOXES_ALPHA 0.25
@@ -353,7 +354,7 @@ struct RivControl {
 
 static unsigned char versionMask[16] = {
 	0xB1, 0x62, 0x56, 0xD4, 0xDF, 0x68, 0x28, 0xA0,
-	0x1A, 0xEE, 0x14, 0x55, 0xD0, 0x7E, 0xC3, 0x57
+	0x1A, 0xEE, 0x14, 0x55, 0xD1, 0x7E, 0xC3, 0x57
 };
 static unsigned char (__fastcall *og_advanceFrame)(SokuLib::v2::Player *);
 static void (*s_originalDrawGradiantBar)(float param1, float param2, float param3);
@@ -1563,10 +1564,10 @@ static void initTagAnim(ChrInfo &chr, SokuLib::Character character, SokuLib::v2:
 		chr.maxCd = SLOW_TAG_CD;
 		if (!chr.deathTag) {
 			mgr.timeStop = 2;
-			if (chr.meterReq == 0 && chr.meter >= SLOW_TAG_COST * ASSIST_CARD_METER)
-				chr.meter -= SLOW_TAG_COST * ASSIST_CARD_METER;
-			else
+			if (chr.burstCharges)
 				chr.burstCharges--;
+			else
+				chr.meter -= SLOW_TAG_COST * ASSIST_CARD_METER;
 			chr.cardName = 1;
 		}
 	} else {
@@ -5377,12 +5378,12 @@ void checkShock(SokuLib::v2::Player &chr, SokuLib::v2::Player &op, ChrInfo &info
 		chr.frameState.actionId >= SokuLib::ACTION_RIGHTBLOCK_HIGH_SMALL_BLOCKSTUN &&
 		chr.frameState.actionId < SokuLib::ACTION_AIR_GUARD &&
 		chr.isOnGround() &&
-		(info.meterReq == 0 && info.meter >= ASSIST_CARD_METER * 2 || info.burstCharges)
+		(info.meterReq == 0 && info.meter >= ASSIST_CARD_METER * BORDER_BREAK_COST || info.burstCharges)
 	) {
-		if (info.meterReq == 0 && info.meter >= ASSIST_CARD_METER * 2)
-			info.meter -= ASSIST_CARD_METER * 2;
-		else
+		if (info.meterReq == 0 && info.meter >= ASSIST_CARD_METER * BORDER_BREAK_COST)
 			info.burstCharges--;
+		else
+			info.meter -= ASSIST_CARD_METER * BORDER_BREAK_COST;
 		chr.setAction(SokuLib::ACTION_BOMB);
 		info.meterReq = MAX_METER_REQ;
 		info.tagAntiBuffer = 20;
